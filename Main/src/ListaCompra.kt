@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter
 class ProductoInvalidoException(mensaje: String) : Exception(mensaje)
 class ProductoNoEncontradoException(mensaje: String) : Exception(mensaje)
 class PresupuestoInvalidoException(mensaje: String) : Exception(mensaje)
+class PresupuestoExcedidoException(mensaje: String) : Exception(mensaje)
+
 
 
 object Logger {
@@ -26,10 +28,13 @@ data class Producto(
     fun calcularSubtotal(): Double = precioUnitario * cantidad
 }
 
-
 class ListaCompra(private var presupuesto: Double = 0.0) {
 
     private val productos: MutableList<Producto> = mutableListOf()
+    private var presupuestoEstablecido: Boolean = false
+
+    // --- Gestión de productos ---
+
     fun agregarProducto(nombre: String, precioUnitario: Double, cantidad: Int) {
         if (nombre.isBlank()) {
             throw ProductoInvalidoException("El nombre del producto no puede estar vacío.")
@@ -41,14 +46,21 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
 
+        val subtotalNuevo = precioUnitario * cantidad
+        if (excederiaPresupuesto(subtotalNuevo)) {
+            throw PresupuestoExcedidoException(
+                "No se puede agregar '$nombre': el total quedaría en $${"%.2f".format(calcularTotalLista() + subtotalNuevo)}, " +
+                        "que excede tu presupuesto de $${"%.2f".format(presupuesto)}. " +
+                        "Saldo disponible actual: $${"%.2f".format(calcularSaldoDisponible())}"
+            )
+        }
+
         val existente = productos.find { it.nombre.equals(nombre, ignoreCase = true) }
         if (existente != null) {
             existente.cantidad += cantidad
         } else {
             productos.add(Producto(nombre, precioUnitario, cantidad))
         }
-
-        verificarPresupuesto()
     }
 
     fun eliminarProducto(nombre: String) {
@@ -61,8 +73,18 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
         val producto = buscarProducto(nombre)
+        val diferenciaCantidad = nuevaCantidad - producto.cantidad
+        val subtotalAdicional = diferenciaCantidad * producto.precioUnitario
+
+        if (diferenciaCantidad > 0 && excederiaPresupuesto(subtotalAdicional)) {
+            throw PresupuestoExcedidoException(
+                "No se puede aumentar la cantidad de '$nombre': el total quedaría en " +
+                        "$${"%.2f".format(calcularTotalLista() + subtotalAdicional)}, que excede tu presupuesto de " +
+                        "$${"%.2f".format(presupuesto)}."
+            )
+        }
+
         producto.cantidad = nuevaCantidad
-        verificarPresupuesto()
     }
 
     private fun buscarProducto(nombre: String): Producto {
@@ -80,12 +102,12 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
         return productos.sumOf { it.calcularSubtotal() }
     }
 
-
     fun establecerPresupuesto(monto: Double) {
         if (monto < 0) {
             throw PresupuestoInvalidoException("El presupuesto no puede ser negativo.")
         }
         presupuesto = monto
+        presupuestoEstablecido = true
     }
 
     fun calcularSaldoDisponible(): Double {
@@ -93,13 +115,11 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
     }
 
     fun excedePresupuesto(): Boolean {
-        return calcularTotalLista() > presupuesto
+        return presupuestoEstablecido && calcularTotalLista() > presupuesto
     }
-
-    private fun verificarPresupuesto() {
-        if (excedePresupuesto()) {
-            mostrarAdvertencia()
-        }
+    private fun excederiaPresupuesto(montoAdicional: Double): Boolean {
+        if (!presupuestoEstablecido) return false
+        return (calcularTotalLista() + montoAdicional) > presupuesto
     }
 
     fun mostrarAdvertencia() {
@@ -107,8 +127,6 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
         println("    Total actual: $${"%.2f".format(calcularTotalLista())}")
         println("    Exceso: $${"%.2f".format(calcularTotalLista() - presupuesto)}")
     }
-
-    // --- Visualización ---
 
     fun mostrarLista() {
         if (productos.isEmpty()) {
@@ -130,7 +148,6 @@ class ListaCompra(private var presupuesto: Double = 0.0) {
         println("Saldo disponible: $${"%.2f".format(calcularSaldoDisponible())}")
     }
 }
-
 
 
 fun main() {
@@ -167,6 +184,9 @@ fun main() {
 
                     lista.agregarProducto(nombre, precio, cantidad)
                     println("Producto agregado correctamente.")
+                } catch (e: PresupuestoExcedidoException) {
+                    println("🚫 ${e.message}")
+                    Logger.registrarError(e.message ?: "Presupuesto excedido al agregar producto")
                 } catch (e: ProductoInvalidoException) {
                     println("Error: ${e.message}")
                     Logger.registrarError(e.message ?: "Error desconocido al agregar producto")
@@ -197,6 +217,9 @@ fun main() {
                         ?: throw ProductoInvalidoException("Cantidad inválida.")
                     lista.modificarCantidad(nombre, cantidad)
                     println("Cantidad actualizada correctamente.")
+                } catch (e: PresupuestoExcedidoException) {
+                    println("🚫 ${e.message}")
+                    Logger.registrarError(e.message ?: "Presupuesto excedido al modificar cantidad")
                 } catch (e: Exception) {
                     println("Error: ${e.message}")
                     Logger.registrarError(e.message ?: "Error al modificar cantidad")
