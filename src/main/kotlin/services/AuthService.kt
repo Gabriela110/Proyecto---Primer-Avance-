@@ -18,6 +18,7 @@ class AuthService {
                 id = 1,
                 nombre = "Administrador",
                 correo = "admin@superselectos.com",
+
                 contrasena = "admin123"
             )
         )
@@ -103,13 +104,15 @@ class AuthService {
 
     fun cerrarSesion() {
 
-        if (usuarioActual == null) {
+        val usuario = usuarioActual
+
+        if (usuario == null) {
             println("No hay ninguna sesión activa.")
             return
         }
 
-        if (usuarioActual is Autenticable) {
-            (usuarioActual as Autenticable).cerrarSesion()
+        if (usuario is Autenticable) {
+            usuario.cerrarSesion()
         }
 
         usuarioActual = null
@@ -117,5 +120,20 @@ class AuthService {
 
     fun haySesionActiva(): Boolean {
         return usuarioActual != null
+    }
+
+    fun listarUsuarios() {
+
+        println()
+        println("===== USUARIOS REGISTRADOS =====")
+
+        if (usuarios.isEmpty()) {
+            println("No hay usuarios registrados.")
+            return
+        }
+
+        usuarios.forEach {
+            println(it)
+        }
     }
 }

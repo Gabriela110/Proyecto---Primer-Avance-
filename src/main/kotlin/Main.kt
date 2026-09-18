@@ -151,6 +151,12 @@ fun mostrarMenuUsuario(authService: AuthService) {
                     }
 
                     "4" -> {
+                        println()
+                        println("Mostrando usuarios registrados...")
+                        authService.listarUsuarios()
+                    }
+
+                    "5" -> {
                         authService.cerrarSesion()
                         cerrar = true
                     }
