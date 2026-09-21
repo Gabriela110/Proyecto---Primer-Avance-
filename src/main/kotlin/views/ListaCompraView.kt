@@ -13,7 +13,7 @@ class ListaCompraView(
         var opcion: Int
 
         do {
-            println("\n===== MENÚ LISTA DE COMPRAS =====")
+            println("\n===== MENÚ PRESUPUESTO Y COMPRAS =====")
             println("1. Establecer presupuesto")
             println("2. Agregar producto a la lista")
             println("3. Modificar cantidad de un producto")

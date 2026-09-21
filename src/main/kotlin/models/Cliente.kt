@@ -25,11 +25,8 @@ class Cliente(
         println()
         println("===== MENÚ CLIENTE =====")
         println("Bienvenido/a, $nombre")
-        println("1. Mis listas de compras")
-        println("2. Productos")
-        println("3. Promociones")
-        println("4. Presupuesto")
-        println("5. Estadísticas")
-        println("6. Cerrar sesión")
+        println("1. Gestión de presupuesto y compras")
+        println("2. Estadísticas")
+        println("3. Cerrar sesión")
     }
 }

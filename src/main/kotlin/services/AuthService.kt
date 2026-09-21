@@ -122,6 +122,9 @@ class AuthService {
         return usuarioActual != null
     }
 
+    fun obtenerUsuarios(): MutableList<Usuario> {
+        return usuarios
+    }
     fun listarUsuarios() {
 
         println()

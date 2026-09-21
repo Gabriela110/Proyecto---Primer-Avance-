@@ -1,5 +1,6 @@
 import services.AuthService
 import services.CategoriaService
+import services.EstadisticaService
 import services.ListaCompraService
 import services.ProductoService
 import services.PromocionService
@@ -18,6 +19,12 @@ fun main() {
     val productoService = ProductoService()
     val promocionService = PromocionService()
     val listaCompraService = ListaCompraService(productoService)
+    val estadisticaService = EstadisticaService(
+        authService = authService,
+        productoService = productoService,
+        promocionService = promocionService,
+        categoriaService = categoriaService
+    )
 
     val categoriaView = CategoriaView(categoriaService, consoleUtils)
     val productoView = ProductoView(productoService, categoriaService, consoleUtils)
@@ -33,7 +40,8 @@ fun main() {
         productoView = productoView,
         promocionView = promocionView,
         authService = authService,
-        consoleUtils = consoleUtils
+        consoleUtils = consoleUtils,
+        estadisticaService = estadisticaService
     )
 
     var continuar = true
@@ -56,7 +64,6 @@ fun main() {
             2 -> {
                 val inicioExitoso = authView.iniciarSesion()
                 if (inicioExitoso) {
-                    // 3. Pasamos listaCompraView a la función del menú
                     mostrarMenuUsuario(authService, adminView, listaCompraView, consoleUtils)
                 }
             }
@@ -88,18 +95,15 @@ fun mostrarMenuUsuario(
         }
 
         usuario.mostrarMenu()
-        val opcion = consoleUtils.leerTexto("Seleccione una opción: ")
 
         when (usuario.rol) {
             "CLIENTE" -> {
+                val opcion = consoleUtils.leerTexto("Seleccione una opción: ")
+
                 when (opcion) {
-                    // 4. Delegamos el control a la vista del módulo
                     "1" -> listaCompraView.menuListaCompra()
-                    "2" -> println("Módulo de productos.")
-                    "3" -> println("Módulo de promociones.")
-                    "4" -> println("Módulo de presupuesto.")
-                    "5" -> println("Módulo de estadísticas.")
-                    "6" -> {
+                    "2" -> println("Módulo disponible proximamente...")
+                    "3" -> {
                         authService.cerrarSesion()
                         cerrar = true
                     }
@@ -109,6 +113,7 @@ fun mostrarMenuUsuario(
 
             "ADMINISTRADOR" -> {
                 adminView.mostrarMenuAdmin()
+                //cerrar = true
             }
         }
     }

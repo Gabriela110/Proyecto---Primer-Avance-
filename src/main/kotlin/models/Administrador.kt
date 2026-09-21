@@ -23,12 +23,6 @@ class Administrador(
 
     override fun mostrarMenu() {
         println()
-        println("===== MENÚ ADMINISTRADOR =====")
         println("Bienvenido/a, $nombre")
-        println("1. Gestionar productos")
-        println("2. Gestionar promociones")
-        println("3. Ver estadísticas")
-        println("4. Ver usuarios")
-        println("5. Cerrar sesión")
     }
 }
