@@ -1,8 +1,40 @@
 import services.AuthService
+import services.CategoriaService
+import services.ListaCompraService
+import services.ProductoService
+import services.PromocionService
+import utils.ConsoleUtils
+import views.AdminView
+import views.AuthView
+import views.CategoriaView
+import views.ListaCompraView
+import views.ProductoView
+import views.PromocionView
 
 fun main() {
-
+    val consoleUtils = ConsoleUtils()
     val authService = AuthService()
+    val categoriaService = CategoriaService()
+    val productoService = ProductoService()
+    val promocionService = PromocionService()
+    val listaCompraService = ListaCompraService(productoService)
+
+    val categoriaView = CategoriaView(categoriaService, consoleUtils)
+    val productoView = ProductoView(productoService, categoriaService, consoleUtils)
+    val promocionView = PromocionView(promocionService, productoService, consoleUtils)
+    val authView = AuthView(authService, consoleUtils)
+    val listaCompraView = ListaCompraView(listaCompraService, productoService, consoleUtils)
+
+    categoriaService.cargarCategoriasIniciales()
+    productoService.cargarProductosIniciales(categoriaService)
+
+    val adminView = AdminView(
+        categoriaView = categoriaView,
+        productoView = productoView,
+        promocionView = promocionView,
+        authService = authService,
+        consoleUtils = consoleUtils
+    )
 
     var continuar = true
 
@@ -15,76 +47,39 @@ fun main() {
         println("1. Registrarse")
         println("2. Iniciar sesión")
         println("3. Salir")
-        print("Seleccione una opción: ")
 
-        when (readLine()) {
+        val opcion = consoleUtils.leerEntero("Seleccione una opción: ")
 
-            "1" -> registrarCliente(authService)
+        when (opcion) {
+            1 -> authView.registrarCliente()
 
-            "2" -> iniciarSesion(authService)
+            2 -> {
+                val inicioExitoso = authView.iniciarSesion()
+                if (inicioExitoso) {
+                    // 3. Pasamos listaCompraView a la función del menú
+                    mostrarMenuUsuario(authService, adminView, listaCompraView, consoleUtils)
+                }
+            }
 
-            "3" -> {
-                println()
-                println("Gracias por utilizar Super Selectos.")
+            3 -> {
+                println("\nGracias por utilizar Super Selectos.")
                 continuar = false
             }
 
-            else -> {
-                println()
-                println("Opción inválida.")
-            }
+            else -> println("\nOpción inválida.")
         }
     }
 }
 
-fun registrarCliente(authService: AuthService) {
-
-    println()
-    println("===== REGISTRO DE CLIENTE =====")
-
-    print("Nombre: ")
-    val nombre = readLine() ?: ""
-
-    print("Correo: ")
-    val correo = readLine() ?: ""
-
-    print("Contraseña: ")
-    val contrasena = readLine() ?: ""
-
-    authService.registrarCliente(
-        nombre = nombre,
-        correo = correo,
-        contrasena = contrasena
-    )
-}
-
-fun iniciarSesion(authService: AuthService) {
-
-    println()
-    println("===== INICIAR SESIÓN =====")
-
-    print("Correo: ")
-    val correo = readLine() ?: ""
-
-    print("Contraseña: ")
-    val contrasena = readLine() ?: ""
-
-    val inicioExitoso = authService.iniciarSesion(
-        correo = correo,
-        contrasena = contrasena
-    )
-
-    if (inicioExitoso) {
-        mostrarMenuUsuario(authService)
-    }
-}
-
-fun mostrarMenuUsuario(authService: AuthService) {
-
+fun mostrarMenuUsuario(
+    authService: AuthService,
+    adminView: AdminView,
+    listaCompraView: ListaCompraView,
+    consoleUtils: ConsoleUtils
+) {
     var cerrar = false
 
     while (!cerrar) {
-
         val usuario = authService.obtenerUsuarioActual()
 
         if (usuario == null) {
@@ -93,78 +88,27 @@ fun mostrarMenuUsuario(authService: AuthService) {
         }
 
         usuario.mostrarMenu()
-
-        print("Seleccione una opción: ")
-        val opcion = readLine()
+        val opcion = consoleUtils.leerTexto("Seleccione una opción: ")
 
         when (usuario.rol) {
-
             "CLIENTE" -> {
-
                 when (opcion) {
-
-                    "1" -> {
-                        println("Módulo de listas de compras.")
-                    }
-
-                    "2" -> {
-                        println("Módulo de productos.")
-                    }
-
-                    "3" -> {
-                        println("Módulo de promociones.")
-                    }
-
-                    "4" -> {
-                        println("Módulo de presupuesto.")
-                    }
-
-                    "5" -> {
-                        println("Módulo de estadísticas.")
-                    }
-
+                    // 4. Delegamos el control a la vista del módulo
+                    "1" -> listaCompraView.menuListaCompra()
+                    "2" -> println("Módulo de productos.")
+                    "3" -> println("Módulo de promociones.")
+                    "4" -> println("Módulo de presupuesto.")
+                    "5" -> println("Módulo de estadísticas.")
                     "6" -> {
                         authService.cerrarSesion()
                         cerrar = true
                     }
-
-                    else -> {
-                        println("Opción inválida.")
-                    }
+                    else -> println("Opción inválida.")
                 }
             }
 
             "ADMINISTRADOR" -> {
-
-                when (opcion) {
-
-                    "1" -> {
-                        println("Gestión de productos.")
-                    }
-
-                    "2" -> {
-                        println("Gestión de promociones.")
-                    }
-
-                    "3" -> {
-                        println("Estadísticas del sistema.")
-                    }
-
-                    "4" -> {
-                        println()
-                        println("Mostrando usuarios registrados...")
-                        authService.listarUsuarios()
-                    }
-
-                    "5" -> {
-                        authService.cerrarSesion()
-                        cerrar = true
-                    }
-
-                    else -> {
-                        println("Opción inválida.")
-                    }
-                }
+                adminView.mostrarMenuAdmin()
             }
         }
     }
