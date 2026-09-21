@@ -19,12 +19,7 @@ fun main() {
     val productoService = ProductoService()
     val promocionService = PromocionService()
     val listaCompraService = ListaCompraService(productoService)
-    val estadisticaService = EstadisticaService(
-        authService = authService,
-        productoService = productoService,
-        promocionService = promocionService,
-        categoriaService = categoriaService
-    )
+    val estadisticaService = EstadisticaService(authService, productoService, promocionService, categoriaService, listaCompraService)
 
     val categoriaView = CategoriaView(categoriaService, consoleUtils)
     val productoView = ProductoView(productoService, categoriaService, consoleUtils)
@@ -64,7 +59,7 @@ fun main() {
             2 -> {
                 val inicioExitoso = authView.iniciarSesion()
                 if (inicioExitoso) {
-                    mostrarMenuUsuario(authService, adminView, listaCompraView, consoleUtils)
+                    mostrarMenuUsuario(authService, adminView, listaCompraView, consoleUtils, estadisticaService)
                 }
             }
 
@@ -82,7 +77,8 @@ fun mostrarMenuUsuario(
     authService: AuthService,
     adminView: AdminView,
     listaCompraView: ListaCompraView,
-    consoleUtils: ConsoleUtils
+    consoleUtils: ConsoleUtils,
+    estadisticaService: EstadisticaService
 ) {
     var cerrar = false
 
@@ -102,7 +98,7 @@ fun mostrarMenuUsuario(
 
                 when (opcion) {
                     "1" -> listaCompraView.menuListaCompra()
-                    "2" -> println("Módulo disponible proximamente...")
+                    "2" -> mostrarEstadisticasCliente(estadisticaService)
                     "3" -> {
                         authService.cerrarSesion()
                         cerrar = true
@@ -117,4 +113,19 @@ fun mostrarMenuUsuario(
             }
         }
     }
+
+}
+
+fun mostrarEstadisticasCliente(estadisticaService: EstadisticaService) {
+    val totalCompra = estadisticaService.obtenerTotalCompraCliente()
+    val saldoDisponible = estadisticaService.obtenerSaldoDisponibleCliente()
+    println("\n==============================================")
+    println("      ESTADÍSTICAS DE USUARIO Y COMPRA      ")
+    println("==============================================")
+    println("  • Productos distintos:           ${estadisticaService.obtenerProductosDistintosCliente()}")
+    println("  • Unidades totales a comprar:    ${estadisticaService.obtenerUnidadesTotalesCliente()}")
+    println("  • Total de compra:               $${"%.2f".format(totalCompra)}")
+    println("  • Saldo disponible:              $${"%.2f".format(saldoDisponible)}")
+    println("  • Diferencia de presupuesto:     $${"%.2f".format(saldoDisponible - totalCompra)}")
+    println("==============================================")
 }
