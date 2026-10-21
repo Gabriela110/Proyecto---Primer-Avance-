@@ -16,9 +16,11 @@ import services.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(
+    authService: AuthService,
     listaCompraService: ListaCompraService,
     productoService: ProductoService,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var presupuestoStr by rememberSaveable { mutableStateOf("") }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
@@ -40,10 +42,7 @@ fun ShoppingListScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
-                title = { Text("Presupuesto y Compras - Súper Selectos") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) { Text("Regresar") }
-                }
+                title = { Text("Presupuesto y Compras - Súper Selectos") }
             )
         },
         bottomBar = {
@@ -53,15 +52,40 @@ fun ShoppingListScreen(
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val total = listaCompraService.calcularTotalLista()
-                    val saldo = listaCompraService.calcularSaldoDisponible()
+                    // Columna separada para los textos de presupuesto y totales
+                    Column {
+                        val total = listaCompraService.calcularTotalLista()
+                        val saldo = listaCompraService.calcularSaldoDisponible()
 
-                    Text("Total de la lista: $${"%.2f".format(total)}", style = MaterialTheme.typography.bodyLarge)
-                    Text("Saldo disponible: $${"%.2f".format(saldo)}", style = MaterialTheme.typography.titleMedium, color = if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                        Text("Total de la lista: $${"%.2f".format(total)}", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Saldo disponible: $${"%.2f".format(saldo)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
 
-                    mensajeFeedback?.let { msg ->
-                        Spacer(Modifier.height(4.dp))
-                        Text(msg, color = if (esError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                        mensajeFeedback?.let { msg ->
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                msg,
+                                color = if (esError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Botón de cierre de sesión ubicado ordenadamente abajo
+                    TextButton(
+                        onClick = {
+                            authService.cerrarSesion()
+                            onLogout()
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Cerrar Sesión")
                     }
                 }
             }
@@ -171,58 +195,102 @@ fun ShoppingListScreen(
             )
         }
 
-        // Diálogo para agregar producto del catálogo (Opción 2)
+        // Diálogo para agregar producto del catálogo (opcion 2)
         if (mostrarDialogoAgregar) {
             val productosDisponibles = productoService.obtenerProductos()
-            var idProductoInput by remember { mutableStateOf("") }
+            var productoSeleccionado by remember { mutableStateOf(productosDisponibles.firstOrNull()) }
             var cantidadInput by remember { mutableStateOf("1") }
 
             AlertDialog(
                 onDismissRequest = { mostrarDialogoAgregar = false },
                 title = { Text("Agregar Producto") },
                 text = {
-                    Column {
-                        Text("Catálogo disponible:", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(4.dp))
-                        for (p in productosDisponibles) {
-                            Text("ID: ${p.id} - ${p.nombre} ($${p.precio})", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = idProductoInput,
-                            onValueChange = { idProductoInput = it },
-                            label = { Text("ID del producto") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Seleccione un producto del catálogo:", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(8.dp))
+
+                        if (productosDisponibles.isEmpty()) {
+                            // Leyenda cuando no hay productos disponibles
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No existen productos actualmente",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            // Lista scrolleable de productos disponibles
+                            LazyColumn(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                items(productosDisponibles.size) { index ->
+                                    val p = productosDisponibles[index]
+                                    val isSelected = productoSeleccionado?.id == p.id
+
+                                    Surface(
+                                        selected = isSelected,
+                                        onClick = { productoSeleccionado = p },
+                                        shape = MaterialTheme.shapes.small,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            Text(p.nombre, style = MaterialTheme.typography.bodyLarge)
+                                            Text("Precio: $${p.precio}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Campo para ingresar la cantidad
                         OutlinedTextField(
                             value = cantidadInput,
                             onValueChange = { cantidadInput = it },
                             label = { Text("Cantidad") },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 },
                 confirmButton = {
-                    Button(onClick = {
-                        try {
-                            val id = idProductoInput.toIntOrNull() ?: 0
-                            val cant = cantidadInput.toIntOrNull() ?: 1
-                            listaCompraService.agregarProducto(id, cant)
-                            mensajeFeedback = "Producto agregado correctamente."
-                            esError = false
-                            mostrarDialogoAgregar = false
-                            actualizarVista()
-                        } catch (e: PresupuestoExcedidoException) {
-                            mensajeFeedback = "🚫 ${e.message}"
-                            esError = true
-                        } catch (e: Exception) {
-                            mensajeFeedback = e.message ?: "Error al agregar producto"
-                            esError = true
-                        }
-                    }) {
+                    Button(
+                        onClick = {
+                            try {
+                                val id = productoSeleccionado?.id ?: throw Exception("Debe seleccionar un producto")
+                                val cant = cantidadInput.toIntOrNull() ?: 1
+                                listaCompraService.agregarProducto(id, cant)
+                                mensajeFeedback = "Producto agregado correctamente."
+                                esError = false
+                                mostrarDialogoAgregar = false
+                                actualizarVista()
+                            } catch (e: PresupuestoExcedidoException) {
+                                mensajeFeedback = "🚫 ${e.message}"
+                                esError = true
+                            } catch (e: Exception) {
+                                mensajeFeedback = e.message ?: "Error al agregar producto"
+                                esError = true
+                            }
+                        },
+                        enabled = productosDisponibles.isNotEmpty() // Deshabilita el botón si no hay productos
+                    ) {
                         Text("Agregar")
                     }
                 },

@@ -10,6 +10,10 @@ kotlin {
     androidTarget()
 
     sourceSets {
+        //IGNORAMOS LA ANTIGUA CARPETA DE VIEWS SIN ELIMINARLA, PARA MANTENER COMO RESPALDO
+        commonMain {
+            kotlin.exclude("**/views/**")
+        }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)

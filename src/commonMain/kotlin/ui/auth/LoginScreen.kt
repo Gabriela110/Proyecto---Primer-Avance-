@@ -1,48 +1,30 @@
 package ui.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import services.AuthService
+import services.AuthErrors
+import services.ValidationException
 
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel,
-    onLoginSuccess: (Role) -> Unit,
-    onGoToRegister: () -> Unit
+    authService: AuthService,
+    onLoginSuccess: (Boolean) -> Unit,
+    onNavigateToRegister: () -> Unit
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    val errors = viewModel.errors
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errors by remember { mutableStateOf(AuthErrors()) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.Center
     ) {
         Text("SuperApp", style = MaterialTheme.typography.headlineLarge)
         Text(
@@ -51,52 +33,63 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(32.dp))
 
+        // Campo de Correo
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { email = it; errors = errors.copy(email = null, general = null) },
             label = { Text("Correo electrónico") },
-            singleLine = true,
             isError = errors.email != null,
-            supportingText = { errors.email?.let { Text(it) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
+        if (errors.email != null) {
+            Text(errors.email!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Campo de Contraseña
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it; errors = errors.copy(password = null, general = null) },
             label = { Text("Contraseña") },
-            singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             isError = errors.password != null,
-            supportingText = { errors.password?.let { Text(it) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
-
-        errors.general?.let {
-            Text(
-                it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+        if (errors.password != null) {
+            Text(errors.password!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
 
-        Spacer(Modifier.height(16.dp))
+        // Error general de credenciales incorrectas
+        if (errors.general != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(errors.general!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Botón de Inicio de Sesión
         Button(
-            onClick = { viewModel.login(email, password, onLoginSuccess) },
+            onClick = {
+                try {
+                    errors = AuthErrors()
+                    val usuario = authService.iniciarSesion(email, password)
+                    val esAdmin = authService.esAdministradorActual()
+                    onLoginSuccess(esAdmin)
+                } catch (e: ValidationException) {
+                    errors = e.errors
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Iniciar sesión")
+            Text("Ingresar")
         }
 
-        TextButton(onClick = {
-            viewModel.clearErrors()
-            onGoToRegister()
-        }) {
-            Text("¿No tenés cuenta? Registrate")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Botón para ir al registro
+        TextButton(onClick = onNavigateToRegister, modifier = Modifier.fillMaxWidth()) {
+            Text("¿No tenés cuenta? Registrate aquí")
         }
     }
 }
