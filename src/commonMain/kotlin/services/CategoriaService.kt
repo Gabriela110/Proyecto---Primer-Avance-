@@ -17,7 +17,7 @@ class CategoriaService {
     }
 
     fun obtenerCategorias(): List<Categoria> {
-        return categorias
+        return categorias.toList()
     }
 
     fun buscarPorId(id: Int): Categoria? {

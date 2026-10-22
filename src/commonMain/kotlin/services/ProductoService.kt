@@ -16,11 +16,16 @@ class ProductoService {
 
             agregarProducto("Arroz 1lb", 1.25, 50, catAlimentos)
             agregarProducto("Agua Embotellada 600ml", 0.75, 100, catBebidas)
+
+            // Productos extra para que las promociones de ejemplo tengan de dónde salir
+            val catLimpieza = categorias.getOrElse(2) { catAlimentos }
+            agregarProducto("Detergente líquido 1L", 3.50, 40, catLimpieza)
+            agregarProducto("Cereal de avena 500g", 2.40, 30, catAlimentos)
         }
     }
 
     fun obtenerProductos(): List<Producto> {
-        return productos
+        return productos.toList()
     }
 
     fun buscarPorId(id: Int): Producto? {
