@@ -57,12 +57,10 @@ fun AdminDashboardScreen(
 
         // 5. Ver usuarios registrados (Llama directamente al método original del AuthService)
         Button(
-            onClick = {
-                authService.listarUsuarios()
-            },
+            onClick = onNavigateToUsuarios,
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
         ) {
-            Text("Ver usuarios registrados (Consola)")
+            Text("Ver usuarios registrados")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

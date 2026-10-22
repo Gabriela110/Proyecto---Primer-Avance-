@@ -40,6 +40,15 @@ class PromocionService {
         return nuevaPromocion
     }
 
+    // Edita nombre, descuento y producto de una promoción existente
+    fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: Int): Boolean {
+        val promocion = buscarPorId(id) ?: return false
+        promocion.nombre = nombre
+        promocion.descuento = descuento
+        promocion.productoId = productoId
+        return true
+    }
+
     fun eliminarPromocion(promocion: Promocion): Boolean {
         return promociones.remove(promocion)
     }

@@ -10,6 +10,7 @@ import ui.theme.SuperAppTheme
 import ui.auth.LoginScreen
 import ui.auth.RegisterScreen
 import ui.admin.AdminDashboardScreen
+import ui.admin.UsuariosScreen
 import ui.client.ClientTab
 import ui.client.PromocionesScreen
 import ui.client.ShoppingListScreen
@@ -77,7 +78,7 @@ fun App() {
                             // Navegación a categorías cuando esté lista
                         },
                         onNavigateToUsuarios = {
-                            // Acción adicional si se requiere
+                            currentScreen = Screen.Users
                         },
                         onLogout = {
                             currentScreen = Screen.Login
@@ -103,6 +104,13 @@ fun App() {
                     )
                 }
 
+                is Screen.Users -> {
+                    UsuariosScreen(
+                        authService = authService,
+                        onBack = { currentScreen = Screen.AdminDashboard }
+                    )
+                }
+
                 is Screen.Products -> {
                     // Aquí pondremos la vista de Productos
                 }
@@ -114,6 +122,7 @@ fun App() {
                         onBack = { currentScreen = promosVolverA },
                         // La barra inferior es del cliente; el administrador no la ve
                         mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
+                        modoAdmin = promosVolverA == Screen.AdminDashboard,
                         onNavigate = { tab ->
                             when (tab) {
                                 ClientTab.INICIO, ClientTab.LISTAS -> currentScreen = Screen.ShoppingList

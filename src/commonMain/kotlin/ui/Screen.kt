@@ -8,4 +8,5 @@ sealed class Screen {
     object Products : Screen()
     object Promotions : Screen()
     object Statistics : Screen()
+    object Users : Screen()                  // Vista de usuarios (solo lectura)
 }
