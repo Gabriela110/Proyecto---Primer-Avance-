@@ -7,6 +7,19 @@ class PromocionService {
     private val promociones = mutableListOf<Promocion>()
     private var siguientePromocionId = 1
 
+    // Promociones de ejemplo para que la pantalla no inicie vacía (solo si no hay ninguna)
+    fun cargarPromocionesIniciales(productoService: ProductoService) {
+        if (promociones.isNotEmpty()) return
+        val productos = productoService.obtenerProductos()
+
+        productos.firstOrNull { it.nombre.startsWith("Detergente") }
+            ?.let { agregarPromocion("En productos de limpieza", 20.0, it.id) }
+        productos.firstOrNull { it.nombre.startsWith("Agua") }
+            ?.let { agregarPromocion("En bebidas seleccionadas", 10.0, it.id) }
+        productos.firstOrNull { it.nombre.startsWith("Cereal") }
+            ?.let { agregarPromocion("En cereales", 15.0, it.id) }
+    }
+
     fun obtenerPromociones(): List<Promocion> {
         return promociones
     }

@@ -3,12 +3,14 @@ package ui.client
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import services.*
@@ -20,7 +22,8 @@ fun ShoppingListScreen(
     listaCompraService: ListaCompraService,
     productoService: ProductoService,
     onBack: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToPromociones: () -> Unit = {}
 ) {
     var presupuestoStr by rememberSaveable { mutableStateOf("") }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
@@ -42,7 +45,11 @@ fun ShoppingListScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
-                title = { Text("Presupuesto y Compras - Súper Selectos") }
+                title = { Text("Mi lista de compras", fontWeight = FontWeight.SemiBold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         },
         bottomBar = {
@@ -106,14 +113,22 @@ fun ShoppingListScreen(
                     onClick = { mostrarDialogoPresupuesto = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Establecer Presupuesto")
+                    Text("Presupuesto", maxLines = 1)
                 }
                 Button(
                     onClick = { mostrarDialogoAgregar = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Agregar Producto")
+                    Text("Agregar producto", maxLines = 1)
                 }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
+                onClick = onNavigateToPromociones,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ver promociones")
             }
 
             Spacer(Modifier.height(16.dp))
@@ -136,7 +151,10 @@ fun ShoppingListScreen(
                         val subtotal = producto.precio * cantidad
 
                         Card(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp).fillMaxWidth(),

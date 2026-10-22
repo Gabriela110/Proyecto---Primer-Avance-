@@ -18,6 +18,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.materialIconsExtended) // íconos de la barra inferior y de Promociones
             implementation(compose.ui)
             implementation(compose.components.resources)
         }

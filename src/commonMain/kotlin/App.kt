@@ -4,11 +4,14 @@ import services.AuthService
 import services.CategoriaService
 import services.ListaCompraService
 import services.ProductoService
+import services.PromocionService
 import ui.Screen
 import ui.theme.SuperAppTheme
 import ui.auth.LoginScreen
 import ui.auth.RegisterScreen
 import ui.admin.AdminDashboardScreen
+import ui.client.ClientTab
+import ui.client.PromocionesScreen
 import ui.client.ShoppingListScreen
 
 @Composable
@@ -20,9 +23,14 @@ fun App() {
     val categoriaService = remember { CategoriaService() }
     categoriaService.cargarCategoriasIniciales()
     productoService.cargarProductosIniciales(categoriaService)
+    val promocionService = remember { PromocionService() }
+    // Se ejecuta una sola vez, después de cargar los productos
+    remember { promocionService.cargarPromocionesIniciales(productoService) }
     MaterialTheme {
         // Mantiene la pantalla activa de TODA la aplicación (inicia en Login)
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
+        // Pantalla a la que regresa "Promociones" (lista del cliente o panel del administrador)
+        var promosVolverA by remember { mutableStateOf<Screen>(Screen.ShoppingList) }
 
         // Mapeo dinámico: dibuja la pantalla que coincida con currentScreen
         SuperAppTheme {
@@ -62,7 +70,8 @@ fun App() {
                             // currentScreen = Screen.Products (o su respectiva ruta)
                         },
                         onNavigateToPromociones = {
-                            // currentScreen = Screen.Promotions (o su respectiva ruta)
+                            promosVolverA = Screen.AdminDashboard
+                            currentScreen = Screen.Promotions
                         },
                         onNavigateToCategorias = {
                             // Navegación a categorías cuando esté lista
@@ -86,6 +95,10 @@ fun App() {
                         },
                         onLogout = {
                             currentScreen = Screen.Login
+                        },
+                        onNavigateToPromociones = {
+                            promosVolverA = Screen.ShoppingList
+                            currentScreen = Screen.Promotions
                         }
                     )
                 }
@@ -95,7 +108,19 @@ fun App() {
                 }
 
                 is Screen.Promotions -> {
-                    // Aquí pondremos la vista de Promociones
+                    PromocionesScreen(
+                        promocionService = promocionService,
+                        productoService = productoService,
+                        onBack = { currentScreen = promosVolverA },
+                        // La barra inferior es del cliente; el administrador no la ve
+                        mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
+                        onNavigate = { tab ->
+                            when (tab) {
+                                ClientTab.INICIO, ClientTab.LISTAS -> currentScreen = Screen.ShoppingList
+                                else -> Unit // Productos y Más: pendientes de sus pantallas
+                            }
+                        }
+                    )
                 }
 
                 is Screen.Statistics -> {
