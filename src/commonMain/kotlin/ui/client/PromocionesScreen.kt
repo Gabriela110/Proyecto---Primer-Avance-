@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -130,7 +131,7 @@ fun PromocionesScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             EncabezadoVerde(
                 titulo = if (modoAdmin) "Gestionar promociones" else "Promociones",
@@ -151,9 +152,10 @@ fun PromocionesScreen(
             }
         },
         bottomBar = {
-            if (mostrarBarraInferior) {
-                ClientBottomBar(seleccionada = ClientTab.PROMOS, onNavigate = onNavigate)
-            }
+//            IMPLEMENTAR BARRA INFERIOR POSTERIORMENTE
+//            if (mostrarBarraInferior) {
+//                ClientBottomBar(seleccionada = ClientTab.PROMOS, onNavigate = onNavigate)
+//            }
         }
     ) { innerPadding ->
         Column(

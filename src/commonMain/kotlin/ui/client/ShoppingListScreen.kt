@@ -119,7 +119,7 @@ fun ShoppingListScreen(
                     onClick = { mostrarDialogoAgregar = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Agregar producto", maxLines = 1)
+                    Text("+ Producto", maxLines = 1)
                 }
             }
 

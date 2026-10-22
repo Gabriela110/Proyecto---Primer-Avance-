@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import services.CategoriaService
+import ui.components.EncabezadoVerde
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,16 +28,7 @@ fun CategoryManagementScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Categorías - Admin") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("← Volver")
-                    }
-                }
-            )
-        },
+        topBar = { EncabezadoVerde(titulo = "Gestionar Categorías", onBack = onBack) },
         floatingActionButton = {
             FloatingActionButton(onClick = { mostrarDialogoCrear = true }) {
                 Text("+ Crear")

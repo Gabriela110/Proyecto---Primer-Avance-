@@ -12,6 +12,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import services.CategoriaService
 import services.ProductoService
+import ui.components.EncabezadoVerde
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,16 +34,7 @@ fun ProductManagementScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Gestión de Productos - Admin") },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("← Volver")
-                    }
-                }
-            )
-        },
+        topBar = { EncabezadoVerde(titulo = "Gestionar Productos", onBack = onBack) },
         floatingActionButton = {
             FloatingActionButton(onClick = { mostrarDialogoCrear = true }) {
                 Text("+ Crear")
