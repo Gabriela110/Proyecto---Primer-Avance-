@@ -13,6 +13,8 @@ import ui.admin.AdminDashboardScreen
 import ui.admin.UsuariosScreen
 import ui.client.ClientTab
 import ui.client.PromocionesScreen
+import ui.admin.ProductManagementScreen
+import ui.admin.CategoryManagementScreen
 import ui.client.ShoppingListScreen
 
 @Composable
@@ -22,11 +24,10 @@ fun App() {
     val productoService = remember { ProductoService() }
     val listaCompraService = remember { ListaCompraService(productoService) }
     val categoriaService = remember { CategoriaService() }
+    val promocionService = remember { PromocionService() }
     categoriaService.cargarCategoriasIniciales()
     productoService.cargarProductosIniciales(categoriaService)
-    val promocionService = remember { PromocionService() }
-    // Se ejecuta una sola vez, después de cargar los productos
-    remember { promocionService.cargarPromocionesIniciales(productoService) }
+    promocionService.cargarPromocionesIniciales(productoService)
     MaterialTheme {
         // Mantiene la pantalla activa de TODA la aplicación (inicia en Login)
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
@@ -68,14 +69,14 @@ fun App() {
                     AdminDashboardScreen(
                         authService = authService,
                         onNavigateToProductos = {
-                            // currentScreen = Screen.Products (o su respectiva ruta)
+                            currentScreen = Screen.Products
                         },
                         onNavigateToPromociones = {
                             promosVolverA = Screen.AdminDashboard
                             currentScreen = Screen.Promotions
                         },
                         onNavigateToCategorias = {
-                            // Navegación a categorías cuando esté lista
+                            currentScreen = Screen.Categories
                         },
                         onNavigateToUsuarios = {
                             currentScreen = Screen.Users
@@ -89,8 +90,8 @@ fun App() {
                 is Screen.ShoppingList -> {
                     ShoppingListScreen(
                         authService = authService,
-                        listaCompraService = listaCompraService, // Tu instancia compartida del servicio
-                        productoService = productoService,       // Tu instancia de productos
+                        listaCompraService = listaCompraService,
+                        productoService = productoService,
                         onBack = {
                             //Definir posteriormente
                         },
@@ -112,7 +113,22 @@ fun App() {
                 }
 
                 is Screen.Products -> {
-                    // Aquí pondremos la vista de Productos
+                    ProductManagementScreen(
+                        productoService = productoService,
+                        categoriaService = categoriaService,
+                        onBack = {
+                            currentScreen = Screen.AdminDashboard
+                        }
+                    )
+                }
+
+                is Screen.Categories -> {
+                    CategoryManagementScreen(
+                        categoriaService = categoriaService,
+                        onBack = {
+                            currentScreen = Screen.AdminDashboard
+                        }
+                    )
                 }
 
                 is Screen.Promotions -> {

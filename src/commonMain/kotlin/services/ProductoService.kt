@@ -25,7 +25,7 @@ class ProductoService {
     }
 
     fun obtenerProductos(): List<Producto> {
-        return productos
+        return productos.toList()
     }
 
     fun buscarPorId(id: Int): Producto? {
