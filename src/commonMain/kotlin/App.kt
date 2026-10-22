@@ -9,6 +9,8 @@ import ui.theme.SuperAppTheme
 import ui.auth.LoginScreen
 import ui.auth.RegisterScreen
 import ui.admin.AdminDashboardScreen
+import ui.admin.ProductManagementScreen
+import ui.admin.CategoryManagementScreen
 import ui.client.ShoppingListScreen
 
 @Composable
@@ -59,13 +61,13 @@ fun App() {
                     AdminDashboardScreen(
                         authService = authService,
                         onNavigateToProductos = {
-                            // currentScreen = Screen.Products (o su respectiva ruta)
+                            currentScreen = Screen.Products
                         },
                         onNavigateToPromociones = {
                             // currentScreen = Screen.Promotions (o su respectiva ruta)
                         },
                         onNavigateToCategorias = {
-                            // Navegación a categorías cuando esté lista
+                            currentScreen = Screen.Categories
                         },
                         onNavigateToUsuarios = {
                             // Acción adicional si se requiere
@@ -79,8 +81,8 @@ fun App() {
                 is Screen.ShoppingList -> {
                     ShoppingListScreen(
                         authService = authService,
-                        listaCompraService = listaCompraService, // Tu instancia compartida del servicio
-                        productoService = productoService,       // Tu instancia de productos
+                        listaCompraService = listaCompraService,
+                        productoService = productoService,
                         onBack = {
                             //Definir posteriormente
                         },
@@ -91,7 +93,22 @@ fun App() {
                 }
 
                 is Screen.Products -> {
-                    // Aquí pondremos la vista de Productos
+                    ProductManagementScreen(
+                        productoService = productoService,
+                        categoriaService = categoriaService,
+                        onBack = {
+                            currentScreen = Screen.AdminDashboard
+                        }
+                    )
+                }
+
+                is Screen.Categories -> {
+                    CategoryManagementScreen(
+                        categoriaService = categoriaService,
+                        onBack = {
+                            currentScreen = Screen.AdminDashboard
+                        }
+                    )
                 }
 
                 is Screen.Promotions -> {
