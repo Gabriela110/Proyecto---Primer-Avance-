@@ -1,10 +1,15 @@
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+
 import services.AuthService
+import services.FirebaseAuthService
 import services.CategoriaService
 import services.ListaCompraService
 import services.ProductoService
 import services.PromocionService
+
 import ui.Screen
 import ui.theme.SuperAppTheme
 import ui.auth.LoginScreen
@@ -19,27 +24,43 @@ import ui.client.ShoppingListScreen
 
 @Composable
 fun App() {
+
     // Instanciamos los servicios principales
     val authService = remember { AuthService() }
+    val firebaseAuthService = remember { FirebaseAuthService() }
+
     val productoService = remember { ProductoService() }
     val listaCompraService = remember { ListaCompraService(productoService) }
     val categoriaService = remember { CategoriaService() }
     val promocionService = remember { PromocionService() }
+
+    val scope = rememberCoroutineScope()
+
+    // Carga inicial de información
     categoriaService.cargarCategoriasIniciales()
     productoService.cargarProductosIniciales(categoriaService)
     promocionService.cargarPromocionesIniciales(productoService)
-    MaterialTheme {
-        // Mantiene la pantalla activa de TODA la aplicación (inicia en Login)
-        var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
-        // Pantalla a la que regresa "Promociones" (lista del cliente o panel del administrador)
-        var promosVolverA by remember { mutableStateOf<Screen>(Screen.ShoppingList) }
 
-        // Mapeo dinámico: dibuja la pantalla que coincida con currentScreen
+    MaterialTheme {
+
+        // Pantalla inicial
+        var currentScreen by remember {
+            mutableStateOf<Screen>(Screen.Login)
+        }
+
+        // Pantalla a la que regresan las promociones
+        var promosVolverA by remember {
+            mutableStateOf<Screen>(Screen.ShoppingList)
+        }
+
         SuperAppTheme {
+
             when (currentScreen) {
+
+                // LOGIN
                 is Screen.Login -> {
                     LoginScreen(
-                        authService = authService,
+                        firebaseAuthService = firebaseAuthService,
                         onLoginSuccess = { esAdministrador ->
                             if (esAdministrador) {
                                 currentScreen = Screen.AdminDashboard
@@ -53,11 +74,15 @@ fun App() {
                     )
                 }
 
+                // REGISTRO
                 is Screen.Register -> {
                     RegisterScreen(
-                        authService = authService,
+                        firebaseAuthService = firebaseAuthService,
                         onRegisterSuccess = {
-                            currentScreen = Screen.Login
+                            scope.launch {
+                                firebaseAuthService.cerrarSesion()
+                                currentScreen = Screen.Login
+                            }
                         },
                         onBackToLogin = {
                             currentScreen = Screen.Login
@@ -65,6 +90,7 @@ fun App() {
                     )
                 }
 
+                // PANEL ADMINISTRADOR
                 is Screen.AdminDashboard -> {
                     AdminDashboardScreen(
                         authService = authService,
@@ -82,21 +108,28 @@ fun App() {
                             currentScreen = Screen.Users
                         },
                         onLogout = {
-                            currentScreen = Screen.Login
+                            scope.launch {
+                                firebaseAuthService.cerrarSesion()
+                                currentScreen = Screen.Login
+                            }
                         }
                     )
                 }
 
+                // LISTA DE COMPRAS
                 is Screen.ShoppingList -> {
                     ShoppingListScreen(
                         authService = authService,
                         listaCompraService = listaCompraService,
                         productoService = productoService,
                         onBack = {
-                            //Definir posteriormente
+                            // Definir posteriormente
                         },
                         onLogout = {
-                            currentScreen = Screen.Login
+                            scope.launch {
+                                firebaseAuthService.cerrarSesion()
+                                currentScreen = Screen.Login
+                            }
                         },
                         onNavigateToPromociones = {
                             promosVolverA = Screen.ShoppingList
@@ -105,13 +138,17 @@ fun App() {
                     )
                 }
 
+                // USUARIOS
                 is Screen.Users -> {
                     UsuariosScreen(
                         authService = authService,
-                        onBack = { currentScreen = Screen.AdminDashboard }
+                        onBack = {
+                            currentScreen = Screen.AdminDashboard
+                        }
                     )
                 }
 
+                // PRODUCTOS
                 is Screen.Products -> {
                     ProductManagementScreen(
                         productoService = productoService,
@@ -122,6 +159,7 @@ fun App() {
                     )
                 }
 
+                // CATEGORÍAS
                 is Screen.Categories -> {
                     CategoryManagementScreen(
                         categoriaService = categoriaService,
@@ -131,29 +169,39 @@ fun App() {
                     )
                 }
 
+                // PROMOCIONES
                 is Screen.Promotions -> {
                     PromocionesScreen(
                         promocionService = promocionService,
                         productoService = productoService,
-                        onBack = { currentScreen = promosVolverA },
-                        // La barra inferior es del cliente; el administrador no la ve
-                        mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
-                        modoAdmin = promosVolverA == Screen.AdminDashboard,
+                        onBack = {
+                            currentScreen = promosVolverA
+                        },
+                        mostrarBarraInferior =
+                            promosVolverA == Screen.ShoppingList,
+                        modoAdmin =
+                            promosVolverA == Screen.AdminDashboard,
                         onNavigate = { tab ->
                             when (tab) {
-                                ClientTab.INICIO, ClientTab.LISTAS -> currentScreen = Screen.ShoppingList
-                                else -> Unit // Productos y Más: pendientes de sus pantallas
+                                ClientTab.INICIO,
+                                ClientTab.LISTAS -> {
+                                    currentScreen = Screen.ShoppingList
+                                }
+
+                                else -> Unit
                             }
                         }
                     )
                 }
 
+                // ESTADÍSTICAS
                 is Screen.Statistics -> {
                     // Aquí pondremos la vista de Estadísticas
                 }
 
+                // RESTO DE PANTALLAS
                 else -> {
-                    // Resto de pantallas
+                    // Pantallas pendientes
                 }
             }
         }

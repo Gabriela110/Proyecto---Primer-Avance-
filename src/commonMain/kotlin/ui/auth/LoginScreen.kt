@@ -1,3 +1,4 @@
+
 package ui.auth
 
 import androidx.compose.foundation.layout.*
@@ -6,19 +7,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import services.AuthService
+import kotlinx.coroutines.launch
+import services.FirebaseAuthService
 import services.AuthErrors
-import services.ValidationException
 
 @Composable
 fun LoginScreen(
-    authService: AuthService,
+    firebaseAuthService: FirebaseAuthService,
     onLoginSuccess: (Boolean) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errors by remember { mutableStateOf(AuthErrors()) }
+    var cargando by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -27,68 +31,123 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text("SuperApp", style = MaterialTheme.typography.headlineLarge)
+
         Text(
             "Controlá tu presupuesto y tus compras",
             style = MaterialTheme.typography.bodyMedium
         )
+
         Spacer(Modifier.height(32.dp))
 
-        // Campo de Correo
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it; errors = errors.copy(email = null, general = null) },
+            onValueChange = {
+                email = it
+                errors = errors.copy(email = null, general = null)
+            },
             label = { Text("Correo electrónico") },
             isError = errors.email != null,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando
         )
+
         if (errors.email != null) {
-            Text(errors.email!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(
+                errors.email!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp))
 
-        // Campo de Contraseña
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it; errors = errors.copy(password = null, general = null) },
+            onValueChange = {
+                password = it
+                errors = errors.copy(password = null, general = null)
+            },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             isError = errors.password != null,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando
         )
+
         if (errors.password != null) {
-            Text(errors.password!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(
+                errors.password!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
 
-        // Error general de credenciales incorrectas
         if (errors.general != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(errors.general!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                errors.general!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Botón de Inicio de Sesión
         Button(
             onClick = {
-                try {
-                    errors = AuthErrors()
-                    val usuario = authService.iniciarSesion(email, password)
-                    val esAdmin = authService.esAdministradorActual()
-                    onLoginSuccess(esAdmin)
-                } catch (e: ValidationException) {
-                    errors = e.errors
+                val emailError = when {
+                    email.isBlank() -> "El correo es obligatorio"
+                    !email.trim().matches(
+                        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+                    ) -> "Correo no válido"
+                    else -> null
+                }
+
+                val passwordError = if (password.isBlank()) {
+                    "La contraseña es obligatoria"
+                } else {
+                    null
+                }
+
+                errors = AuthErrors(
+                    email = emailError,
+                    password = passwordError
+                )
+
+                if (emailError == null && passwordError == null) {
+                    scope.launch {
+                        cargando = true
+
+                        try {
+                            firebaseAuthService.iniciarSesion(email, password)
+
+                            // El rol se determinará al integrar la información
+                            // de usuarios con el módulo de Firestore.
+                            onLoginSuccess(false)
+
+                        } catch (e: Exception) {
+                            errors = AuthErrors(
+                                general = "No se pudo iniciar sesión. Verificá tu correo y contraseña."
+                            )
+                        } finally {
+                            cargando = false
+                        }
+                    }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando
         ) {
-            Text("Ingresar")
+            Text(if (cargando) "Ingresando..." else "Ingresar")
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp))
 
-        // Botón para ir al registro
-        TextButton(onClick = onNavigateToRegister, modifier = Modifier.fillMaxWidth()) {
+        TextButton(
+            onClick = onNavigateToRegister,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando
+        ) {
             Text("¿No tenés cuenta? Registrate aquí")
         }
     }

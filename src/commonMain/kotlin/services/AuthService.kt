@@ -4,6 +4,7 @@ import models.Administrador
 import models.Autenticable
 import models.Cliente
 import models.Usuario
+import dev.gitlive.firebase.auth.FirebaseAuth
 
 // Estructura exacta para conservar todos los errores detallados por campo
 data class AuthErrors(
@@ -68,7 +69,7 @@ class AuthService {
             else -> null
         }
 
-        // 👈 Conservado exactamente como lo tenías
+
         val confirmError = when {
             confirm.isBlank() -> "Confirmá la contraseña"
             confirm != password -> "Las contraseñas no coinciden"
@@ -160,4 +161,6 @@ class AuthService {
         }
         usuarios.forEach { println(it) }
     }
+
+
 }

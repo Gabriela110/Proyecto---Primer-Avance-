@@ -1,8 +1,9 @@
 plugins {
-    kotlin("multiplatform") version "2.1.0"
+    kotlin("multiplatform") version "2.3.0"
     id("com.android.application") version "8.7.3"
     id("org.jetbrains.compose") version "1.7.3"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
+    id("com.google.gms.google-services") version "4.4.4"
 }
 
 kotlin {
@@ -21,6 +22,8 @@ kotlin {
             implementation(compose.materialIconsExtended) // íconos de la barra inferior y de Promociones
             implementation(compose.ui)
             implementation(compose.components.resources)
+            implementation("dev.gitlive:firebase-auth:2.7.0")
+            implementation("dev.gitlive:firebase-firestore:2.7.0")
         }
 
         getByName("desktopMain").dependencies {
