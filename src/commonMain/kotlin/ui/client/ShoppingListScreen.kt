@@ -1,321 +1,408 @@
 package ui.client
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import services.*
+import models.Producto
+import services.ListaCompraService
+import ui.components.DialogoCantidad
+import ui.components.EncabezadoVerde
+import ui.components.dinero
+import ui.components.formatoDescuento
+import ui.components.parseDecimal
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Lista de compras del cliente.
+ *
+ * - Resumen del presupuesto (total, saldo y barra de avance).
+ * - Cada producto se puede editar (cantidad) o quitar de la lista.
+ * - Los productos se agregan desde la pestaña "Productos".
+ * - Los precios ya incluyen las promociones vigentes.
+ */
 @Composable
 fun ShoppingListScreen(
-    authService: AuthService,
     listaCompraService: ListaCompraService,
-    productoService: ProductoService,
-    onBack: () -> Unit,
-    onLogout: () -> Unit,
-    onNavigateToPromociones: () -> Unit = {}
+    onNavigate: (ClientTab) -> Unit
 ) {
-    var presupuestoStr by rememberSaveable { mutableStateOf("") }
-    var mensajeFeedback by remember { mutableStateOf<String?>(null) }
-    var esError by remember { mutableStateOf(false) }
+    // Los servicios guardan listas simples (no observables): este contador refresca la pantalla
+    var version by remember { mutableStateOf(0) }
 
-    // Estados para diálogos modales de acciones
-    var mostrarDialogoPresupuesto by remember { mutableStateOf(false) }
-    var mostrarDialogoAgregar by remember { mutableStateOf(false) }
+    var mostrarPresupuesto by remember { mutableStateOf(false) }
+    var productoEnEdicion by remember { mutableStateOf<Producto?>(null) }
+    var productoAQuitar by remember { mutableStateOf<Producto?>(null) }
 
-    // Refrescar estados de la lista
-    var elementos by remember { mutableStateOf(listaCompraService.obtenerElementos()) }
-    var presupuestoActual by remember { mutableStateOf(0.0) } // O el valor que devuelva tu servicio
-
-    fun actualizarVista() {
-        elementos = listaCompraService.obtenerElementos()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(mensaje) {
+        mensaje?.let {
+            snackbarHostState.showSnackbar(it)
+            mensaje = null
+        }
     }
 
+    val elementos = version.let { listaCompraService.obtenerElementos().entries.toList() }
+    val total = listaCompraService.calcularTotalLista()
+    val saldo = listaCompraService.calcularSaldoDisponible()
+    val presupuesto = listaCompraService.obtenerPresupuesto()
+    val hayPresupuesto = listaCompraService.hayPresupuesto()
+
     Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            TopAppBar(
-                title = { Text("Mi lista de compras", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        bottomBar = {
-            // Barra inferior con totales y saldo disponible
-            Surface(
-                tonalElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Columna separada para los textos de presupuesto y totales
-                    Column {
-                        val total = listaCompraService.calcularTotalLista()
-                        val saldo = listaCompraService.calcularSaldoDisponible()
-
-                        Text("Total de la lista: $${"%.2f".format(total)}", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Saldo disponible: $${"%.2f".format(saldo)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (saldo < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        )
-
-                        mensajeFeedback?.let { msg ->
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                msg,
-                                color = if (esError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Botón de cierre de sesión ubicado ordenadamente abajo
-                    TextButton(
-                        onClick = {
-                            authService.cerrarSesion()
-                            onLogout()
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Cerrar Sesión")
-                    }
-                }
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = { EncabezadoVerde(titulo = "Mi lista de compras") },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = { ClientBottomBar(seleccionada = ClientTab.LISTAS, onNavigate = onNavigate) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp)
         ) {
-            // Botones de acciones principales (Equivalentes al menú 1, 2 y 6 de consola)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { mostrarDialogoPresupuesto = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Presupuesto", maxLines = 1)
-                }
-                Button(
-                    onClick = { mostrarDialogoAgregar = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("+ Producto", maxLines = 1)
-                }
-            }
+            ResumenPresupuesto(
+                hayPresupuesto = hayPresupuesto,
+                presupuesto = presupuesto,
+                total = total,
+                saldo = saldo,
+                onCambiarPresupuesto = { mostrarPresupuesto = true },
+                modifier = Modifier.padding(16.dp)
+            )
 
-            Spacer(Modifier.height(8.dp))
-            FilledTonalButton(
-                onClick = onNavigateToPromociones,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ver promociones")
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Text("Tu Lista de Compras", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Tus productos (${elementos.size})",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
             Spacer(Modifier.height(8.dp))
 
-            // Lista de elementos visuales (Equivalente a la opción 5 de consola)
             if (elementos.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("La lista de compras está vacía.", style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Tu lista está vacía.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Agregá productos desde el catálogo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { onNavigate(ClientTab.PRODUCTOS) }) {
+                        Text("Ver productos")
+                    }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(elementos.entries.toList()) { index, entry ->
-                        val producto = entry.key
-                        val cantidad = entry.value
-                        val subtotal = producto.precio * cantidad
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("${index + 1}. ${producto.nombre}", style = MaterialTheme.typography.bodyLarge)
-                                    Text("Cantidad: $cantidad | Unitario: $${"%.2f".format(producto.precio)}")
-                                    Text("Subtotal: $${"%.2f".format(subtotal)}", style = MaterialTheme.typography.bodyMedium)
-                                }
-
-                                // Botones de modificar/eliminar...
-                            }
-                        }
+                    items(elementos, key = { it.key.id }) { entry ->
+                        TarjetaElemento(
+                            producto = entry.key,
+                            cantidad = entry.value,
+                            precioUnitario = listaCompraService.precioUnitario(entry.key),
+                            descuento = listaCompraService.descuentoDe(entry.key),
+                            onEditar = { productoEnEdicion = entry.key },
+                            onQuitar = { productoAQuitar = entry.key }
+                        )
                     }
                 }
             }
         }
+    }
 
-        // Diálogo para establecer presupuesto (Opción 1)
-        if (mostrarDialogoPresupuesto) {
-            var nuevoPresupuesto by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { mostrarDialogoPresupuesto = false },
-                title = { Text("Establecer Presupuesto") },
-                text = {
-                    OutlinedTextField(
-                        value = nuevoPresupuesto,
-                        onValueChange = { nuevoPresupuesto = it },
-                        label = { Text("Monto límite ($)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                },
-                confirmButton = {
-                    Button(onClick = {
+    // ---- Establecer presupuesto ----
+    if (mostrarPresupuesto) {
+        DialogoPresupuesto(
+            presupuestoActual = if (hayPresupuesto) presupuesto else null,
+            onGuardar = { monto ->
+                try {
+                    listaCompraService.establecerPresupuesto(monto)
+                    mensaje = "Presupuesto actualizado correctamente."
+                    version += 1
+                    mostrarPresupuesto = false
+                    null
+                } catch (e: Exception) {
+                    e.message ?: "No se pudo establecer el presupuesto"
+                }
+            },
+            onCancelar = { mostrarPresupuesto = false }
+        )
+    }
+
+    // ---- Cambiar cantidad ----
+    productoEnEdicion?.let { producto ->
+        DialogoCantidad(
+            titulo = "Cambiar cantidad",
+            detalle = "${producto.nombre} · \$${dinero(listaCompraService.precioUnitario(producto))} c/u",
+            cantidadInicial = listaCompraService.obtenerElementos()[producto] ?: 1,
+            textoConfirmar = "Guardar",
+            onConfirmar = { cantidad ->
+                try {
+                    listaCompraService.modificarCantidad(producto.id, cantidad)
+                    mensaje = "Cantidad actualizada."
+                    version += 1
+                    productoEnEdicion = null
+                    null
+                } catch (e: Exception) {
+                    e.message ?: "No se pudo actualizar la cantidad"
+                }
+            },
+            onCancelar = { productoEnEdicion = null }
+        )
+    }
+
+    // ---- Quitar de la lista (con confirmación) ----
+    productoAQuitar?.let { producto ->
+        AlertDialog(
+            onDismissRequest = { productoAQuitar = null },
+            title = { Text("Quitar producto") },
+            text = { Text("¿Querés quitar \"${producto.nombre}\" de tu lista?") },
+            confirmButton = {
+                Button(
+                    onClick = {
                         try {
-                            val monto = nuevoPresupuesto.toDoubleOrNull() ?: 0.0
-                            listaCompraService.establecerPresupuesto(monto)
-                            mensajeFeedback = "Presupuesto actualizado correctamente."
-                            esError = false
-                            mostrarDialogoPresupuesto = false
-                            actualizarVista()
+                            listaCompraService.eliminarProducto(producto.id)
+                            mensaje = "Producto quitado de la lista."
                         } catch (e: Exception) {
-                            mensajeFeedback = e.message ?: "Error al establecer presupuesto"
-                            esError = true
+                            mensaje = e.message ?: "No se pudo quitar el producto"
                         }
-                    }) {
-                        Text("Guardar")
+                        version += 1
+                        productoAQuitar = null
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { mostrarDialogoPresupuesto = false }) { Text("Cancelar") }
+                ) { Text("Quitar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { productoAQuitar = null }) { Text("Cancelar") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ResumenPresupuesto(
+    hayPresupuesto: Boolean,
+    presupuesto: Double,
+    total: Double,
+    saldo: Double,
+    onCambiarPresupuesto: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val excedido = hayPresupuesto && saldo < 0
+    val fraccion = if (hayPresupuesto && presupuesto > 0) (total / presupuesto).toFloat().coerceIn(0f, 1f) else 0f
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Presupuesto", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        text = if (hayPresupuesto) "\$${dinero(presupuesto)}" else "Sin definir",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            )
-        }
-
-        // Diálogo para agregar producto del catálogo (opcion 2)
-        if (mostrarDialogoAgregar) {
-            val productosDisponibles = productoService.obtenerProductos()
-            var productoSeleccionado by remember { mutableStateOf(productosDisponibles.firstOrNull()) }
-            var cantidadInput by remember { mutableStateOf("1") }
-
-            AlertDialog(
-                onDismissRequest = { mostrarDialogoAgregar = false },
-                title = { Text("Agregar Producto") },
-                text = {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Seleccione un producto del catálogo:", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(8.dp))
-
-                        if (productosDisponibles.isEmpty()) {
-                            // Leyenda cuando no hay productos disponibles
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "No existen productos actualmente",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        } else {
-                            // Lista scrolleable de productos disponibles
-                            LazyColumn(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                items(productosDisponibles.size) { index ->
-                                    val p = productosDisponibles[index]
-                                    val isSelected = productoSeleccionado?.id == p.id
-
-                                    Surface(
-                                        selected = isSelected,
-                                        onClick = { productoSeleccionado = p },
-                                        shape = MaterialTheme.shapes.small,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(modifier = Modifier.padding(8.dp)) {
-                                            Text(p.nombre, style = MaterialTheme.typography.bodyLarge)
-                                            Text("Precio: $${p.precio}", style = MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        // Campo para ingresar la cantidad
-                        OutlinedTextField(
-                            value = cantidadInput,
-                            onValueChange = { cantidadInput = it },
-                            label = { Text("Cantidad") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            try {
-                                val id = productoSeleccionado?.id ?: throw Exception("Debe seleccionar un producto")
-                                val cant = cantidadInput.toIntOrNull() ?: 1
-                                listaCompraService.agregarProducto(id, cant)
-                                mensajeFeedback = "Producto agregado correctamente."
-                                esError = false
-                                mostrarDialogoAgregar = false
-                                actualizarVista()
-                            } catch (e: PresupuestoExcedidoException) {
-                                mensajeFeedback = "🚫 ${e.message}"
-                                esError = true
-                            } catch (e: Exception) {
-                                mensajeFeedback = e.message ?: "Error al agregar producto"
-                                esError = true
-                            }
-                        },
-                        enabled = productosDisponibles.isNotEmpty() // Deshabilita el botón si no hay productos
-                    ) {
-                        Text("Agregar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { mostrarDialogoAgregar = false }) { Text("Cancelar") }
+                OutlinedButton(onClick = onCambiarPresupuesto) {
+                    Text(if (hayPresupuesto) "Cambiar" else "Establecer")
                 }
-            )
+            }
+
+            if (hayPresupuesto) {
+                Spacer(Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { fraccion },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (excedido) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Total: \$${dinero(total)}", style = MaterialTheme.typography.bodyMedium)
+                if (hayPresupuesto) {
+                    Text(
+                        text = if (excedido) "Excedido: \$${dinero(-saldo)}" else "Disponible: \$${dinero(saldo)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (excedido) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun TarjetaElemento(
+    producto: Producto,
+    cantidad: Int,
+    precioUnitario: Double,
+    descuento: Double,
+    onEditar: () -> Unit,
+    onQuitar: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = producto.nombre,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "$cantidad × \$${dinero(precioUnitario)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (descuento > 0) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "\$${dinero(producto.precio)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            textDecoration = TextDecoration.LineThrough,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "-${formatoDescuento(descuento)}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Text(
+                    text = "Subtotal: \$${dinero(precioUnitario * cantidad)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            IconButton(onClick = onEditar) {
+                Icon(Icons.Filled.Edit, contentDescription = "Cambiar cantidad")
+            }
+            IconButton(onClick = onQuitar) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Quitar de la lista",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+/** Devuelve un mensaje de error si el monto no es válido, o null si se guardó bien. */
+@Composable
+private fun DialogoPresupuesto(
+    presupuestoActual: Double?,
+    onGuardar: (Double) -> String?,
+    onCancelar: () -> Unit
+) {
+    var texto by remember { mutableStateOf(presupuestoActual?.let { dinero(it) } ?: "") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Establecer presupuesto") },
+        text = {
+            OutlinedTextField(
+                value = texto,
+                onValueChange = {
+                    texto = it
+                    error = null
+                },
+                label = { Text("Monto límite (\$)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                isError = error != null,
+                supportingText = { error?.let { Text(it) } },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(onClick = {
+                val monto = parseDecimal(texto)
+                error = when {
+                    texto.isBlank() -> "El monto es obligatorio"
+                    monto == null -> "Ingresá un número válido"
+                    monto <= 0 -> "Debe ser mayor a 0"
+                    else -> onGuardar(monto)
+                }
+            }) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
+        }
+    )
 }

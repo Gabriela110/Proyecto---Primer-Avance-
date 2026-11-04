@@ -23,7 +23,9 @@ object Logger {
 }
 
 class ListaCompraService(
-    private val productoService: ProductoService
+    private val productoService: ProductoService,
+    // Opcional: si se entrega, la lista aplica las promociones vigentes a los precios
+    private val promocionService: PromocionService? = null
 ) {
     // Mapa: Producto del catálogo como Clave, Cantidad (Int) como Valor
     private val elementos = mutableMapOf<Producto, Int>()
@@ -32,7 +34,7 @@ class ListaCompraService(
 
     fun obtenerElementos(): Map<Producto, Int> = elementos
 
-    fun agregarProducto(productoId: Int, cantidad: Int) {
+    fun agregarProducto(productoId: String, cantidad: Int) {
         if (cantidad <= 0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
@@ -40,7 +42,14 @@ class ListaCompraService(
         val producto = productoService.buscarPorId(productoId)
             ?: throw ProductoNoEncontradoException("No se encontró el producto con ID $productoId.")
 
-        val subtotalNuevo = producto.precio * cantidad
+        val enLista = elementos[producto] ?: 0
+        if (enLista + cantidad > producto.stock) {
+            throw ProductoInvalidoException(
+                "Stock insuficiente de '${producto.nombre}': hay ${producto.stock} disponibles y ya tenés $enLista en tu lista."
+            )
+        }
+
+        val subtotalNuevo = precioUnitario(producto) * cantidad
 
         if (excederiaPresupuesto(subtotalNuevo)) {
             throw PresupuestoExcedidoException(
@@ -54,14 +63,14 @@ class ListaCompraService(
         elementos[producto] = cantidadActual + cantidad
     }
 
-    fun eliminarProducto(productoId: Int) {
+    fun eliminarProducto(productoId: String) {
         val producto = elementos.keys.find { it.id == productoId }
             ?: throw ProductoNoEncontradoException("No se encontró el producto con ID $productoId en la lista.")
 
         elementos.remove(producto)
     }
 
-    fun modificarCantidad(productoId: Int, nuevaCantidad: Int) {
+    fun modificarCantidad(productoId: String, nuevaCantidad: Int) {
         if (nuevaCantidad <= 0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
@@ -69,9 +78,15 @@ class ListaCompraService(
         val producto = elementos.keys.find { it.id == productoId }
             ?: throw ProductoNoEncontradoException("No se encontró el producto con ID $productoId en la lista.")
 
+        if (nuevaCantidad > producto.stock) {
+            throw ProductoInvalidoException(
+                "Stock insuficiente de '${producto.nombre}': solo hay ${producto.stock} disponibles."
+            )
+        }
+
         val cantidadActual = elementos[producto] ?: 0
         val diferenciaCantidad = nuevaCantidad - cantidadActual
-        val subtotalAdicional = diferenciaCantidad * producto.precio
+        val subtotalAdicional = diferenciaCantidad * precioUnitario(producto)
 
         if (diferenciaCantidad > 0 && excederiaPresupuesto(subtotalAdicional)) {
             throw PresupuestoExcedidoException(
@@ -85,7 +100,36 @@ class ListaCompraService(
     }
 
     fun calcularTotalLista(): Double {
-        return elementos.entries.sumOf { (producto, cantidad) -> producto.precio * cantidad }
+        return elementos.entries.sumOf { (producto, cantidad) -> precioUnitario(producto) * cantidad }
+    }
+
+    // Mayor descuento (%) vigente para el producto, o 0.0 si no tiene promoción
+    fun descuentoDe(producto: Producto): Double {
+        return promocionService?.obtenerPromociones()
+            ?.filter { it.productoId == producto.id }
+            ?.maxOfOrNull { it.descuento } ?: 0.0
+    }
+
+    // Precio que realmente se cobra en la lista (con la promoción aplicada)
+    fun precioUnitario(producto: Producto): Double {
+        return producto.precio * (1 - descuentoDe(producto) / 100.0)
+    }
+
+    fun obtenerPresupuesto(): Double = presupuesto
+
+    fun hayPresupuesto(): Boolean = presupuestoEstablecido
+
+    // Quita un producto de la lista si está (se usa cuando el administrador lo elimina del catálogo)
+    fun quitarSiExiste(productoId: String) {
+        elementos.keys.find { it.id == productoId }?.let { elementos.remove(it) }
+    }
+
+    // Producto es un data class mutable: si el administrador lo edita, su hash cambia y el mapa
+    // se desordena. Este método reconstruye el mapa para que las búsquedas sigan funcionando.
+    fun reindexar() {
+        val copia = elementos.entries.map { it.key to it.value }
+        elementos.clear()
+        copia.forEach { (producto, cantidad) -> elementos[producto] = cantidad }
     }
 
     fun establecerPresupuesto(monto: Double) {

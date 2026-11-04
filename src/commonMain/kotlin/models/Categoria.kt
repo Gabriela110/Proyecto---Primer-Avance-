@@ -1,6 +1,7 @@
 package models
 
 data class Categoria(
-    val id: Int,
-    var nombre: String
+    val id: String = "",
+    val nombre: String,
+    val descripcion: String = ""
 )

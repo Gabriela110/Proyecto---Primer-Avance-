@@ -10,4 +10,6 @@ sealed class Screen {
     object Promotions : Screen()
     object Statistics : Screen()
     object Users : Screen()                  // Vista de usuarios (solo lectura)
+    object Catalog : Screen()                // Catálogo de productos (cliente)
+    object More : Screen()                   // Pestaña "Más" (cliente)
 }

@@ -17,9 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Encabezado verde con flecha de regreso y título centrado (se reutiliza en varias pantallas). */
+/**
+ * Encabezado verde con título centrado (se reutiliza en varias pantallas).
+ * Si [onBack] es null no muestra la flecha de regreso (pantallas con barra inferior).
+ */
 @Composable
-fun EncabezadoVerde(titulo: String, onBack: () -> Unit) {
+fun EncabezadoVerde(titulo: String, onBack: (() -> Unit)? = null) {
     Surface(
         color = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -30,8 +33,10 @@ fun EncabezadoVerde(titulo: String, onBack: () -> Unit) {
                 .statusBarsPadding()
                 .height(56.dp)
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+            if (onBack != null) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                }
             }
             Text(
                 text = titulo,

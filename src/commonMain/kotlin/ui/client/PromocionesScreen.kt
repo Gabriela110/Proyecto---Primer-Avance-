@@ -449,7 +449,7 @@ private fun TarjetaPromocion(
 private fun FormularioPromocion(
     inicial: Promocion?,
     productos: List<Producto>,
-    onGuardar: (nombre: String, descuento: Double, productoId: Int) -> Unit,
+    onGuardar: (nombre: String, descuento: Double, productoId: String) -> Unit,
     onCancelar: () -> Unit
 ) {
     var nombre by remember { mutableStateOf(inicial?.nombre ?: "") }

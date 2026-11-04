@@ -1,9 +1,11 @@
 package models
 
 data class Producto(
-    val id: Int,
-    var nombre: String,
-    var precio: Double,
-    var stock: Int,
-    var categoria: Categoria
+    val id: String = "",
+    val nombre: String,
+    val precio: Double,
+    val categoriaId: String = "",
+    var categoria: Categoria = Categoria(id = categoriaId, nombre = ""),
+    val stock: Int = 0,
+    val imagenUrl: String = ""
 )

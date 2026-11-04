@@ -1,60 +1,96 @@
 package services
 
 import models.Promocion
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class PromocionService {
+    private val _promociones = MutableStateFlow<List<Promocion>>(emptyList())
+    val promociones: StateFlow<List<Promocion>> = _promociones.asStateFlow()
 
-    private val promociones = mutableListOf<Promocion>()
-    private var siguientePromocionId = 1
-
-    // Promociones de ejemplo para que la pantalla no inicie vacía (solo si no hay ninguna)
     fun cargarPromocionesIniciales(productoService: ProductoService) {
-        if (promociones.isNotEmpty()) return
-        val productos = productoService.obtenerProductos()
-
-        productos.firstOrNull { it.nombre.startsWith("Detergente") }
-            ?.let { agregarPromocion("En productos de limpieza", 20.0, it.id) }
-        productos.firstOrNull { it.nombre.startsWith("Agua") }
-            ?.let { agregarPromocion("En bebidas seleccionadas", 10.0, it.id) }
-        productos.firstOrNull { it.nombre.startsWith("Cereal") }
-            ?.let { agregarPromocion("En cereales", 15.0, it.id) }
+        if (_promociones.value.isEmpty()) {
+            val productos = productoService.obtenerProductos()
+            if (productos.isNotEmpty()) {
+                _promociones.value = listOf(
+                    Promocion(id = "1", productoId = productos[0].id, porcentajeDescuento = 20.0, descripcion = "Descuento en Lácteos", activa = true)
+                )
+            }
+        }
     }
 
-    fun obtenerPromociones(): List<Promocion> {
-        return promociones
+    fun obtenerPromociones(): List<Promocion> = _promociones.value
+
+    fun agregarPromocion(promocion: Promocion) {
+        val nuevoId = (promociones.value.size + 1).toString()
+        _promociones.value = _promociones.value + promocion.copy(id = nuevoId)
     }
 
-    fun buscarPorId(id: Int): Promocion? {
-        return promociones.find { it.id == id }
-    }
-
-    fun agregarPromocion(nombre: String, descuento: Double, productoId: Int): Promocion {
-        val nuevaPromocion = Promocion(
-            id = siguientePromocionId,
+    fun agregarPromocion(nombre: String, descuento: Double, productoId: String, descripcion: String = "") {
+        val nuevoId = (promociones.value.size + 1).toString()
+        val nueva = Promocion(
+            id = nuevoId,
             nombre = nombre,
+            productoId = productoId,
+            porcentajeDescuento = descuento,
             descuento = descuento,
-            productoId = productoId
+            descripcion = descripcion
         )
-        promociones.add(nuevaPromocion)
-        siguientePromocionId++
-        return nuevaPromocion
+        _promociones.value = _promociones.value + nueva
     }
 
-    // Edita nombre, descuento y producto de una promoción existente
-    fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: Int): Boolean {
-        val promocion = buscarPorId(id) ?: return false
-        promocion.nombre = nombre
-        promocion.descuento = descuento
-        promocion.productoId = productoId
-        return true
+    fun agregarPromocion(nombre: String, descuento: Double, productoId: Int, descripcion: String = "") {
+        agregarPromocion(nombre, descuento, productoId.toString(), descripcion)
+    }
+
+    fun actualizarPromocion(promocion: Promocion) {
+        _promociones.value = _promociones.value.map { if (it.id == promocion.id) promocion else it }
+    }
+
+    fun actualizarPromocion(id: String, nombre: String, descuento: Double, productoId: String, descripcion: String = "") {
+        _promociones.value = _promociones.value.map {
+            if (it.id == id) {
+                it.copy(
+                    nombre = nombre,
+                    porcentajeDescuento = descuento,
+                    descuento = descuento,
+                    productoId = productoId,
+                    descripcion = descripcion
+                )
+            } else {
+                it
+            }
+        }
+    }
+
+    fun actualizarPromocion(id: String, nombre: String, descuento: Double, productoId: Int, descripcion: String = "") {
+        actualizarPromocion(id, nombre, descuento, productoId.toString(), descripcion)
+    }
+
+    fun eliminarPromocion(id: String): Boolean {
+        val existe = _promociones.value.any { it.id == id }
+        if (existe) {
+            _promociones.value = _promociones.value.filterNot { it.id == id }
+        }
+        return existe
     }
 
     fun eliminarPromocion(promocion: Promocion): Boolean {
-        return promociones.remove(promocion)
+        return eliminarPromocion(promocion.id)
     }
 
-    // Método para eliminar promociones cuando se borra un producto
+    fun eliminarPorProductoId(productoId: String) {
+        _promociones.value = _promociones.value.filterNot { it.productoId == productoId }
+    }
+
     fun eliminarPorProductoId(productoId: Int) {
-        promociones.removeIf { it.productoId == productoId }
+        eliminarPorProductoId(productoId.toString())
+    }
+
+    fun cambiarEstadoPromocion(id: String, activa: Boolean) {
+        _promociones.value = _promociones.value.map {
+            if (it.id == id) it.copy(activa = activa) else it
+        }
     }
 }
