@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import services.CategoriaService
 import ui.components.EncabezadoVerde
 
@@ -17,6 +18,7 @@ fun CategoryManagementScreen(
     categoriaService: CategoriaService,
     onBack: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var categorias by remember { mutableStateOf(categoriaService.obtenerCategorias()) }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
@@ -136,7 +138,7 @@ fun CategoryManagementScreen(
                         onClick = {
                             try {
                                 if (nombreInput.isBlank()) throw Exception("El nombre no puede estar vacío")
-                                categoriaService.agregarCategoria(nombreInput.trim())
+                                coroutineScope.launch{categoriaService.agregarCategoria(nombreInput.trim())}
                                 mensajeFeedback = "Categoría creada correctamente."
                                 esError = false
                                 mostrarDialogoCrear = false

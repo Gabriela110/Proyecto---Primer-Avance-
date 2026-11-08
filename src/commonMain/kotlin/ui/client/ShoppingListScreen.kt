@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import services.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,6 +26,7 @@ fun ShoppingListScreen(
     onLogout: () -> Unit,
     onNavigateToPromociones: () -> Unit = {}
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var presupuestoStr by rememberSaveable { mutableStateOf("") }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
@@ -36,9 +38,15 @@ fun ShoppingListScreen(
     // Refrescar estados de la lista
     var elementos by remember { mutableStateOf(listaCompraService.obtenerElementos()) }
     var presupuestoActual by remember { mutableStateOf(0.0) } // O el valor que devuelva tu servicio
+    var saldo by remember { mutableStateOf(0.0) }
 
     fun actualizarVista() {
         elementos = listaCompraService.obtenerElementos()
+        coroutineScope.launch{saldo = listaCompraService.calcularSaldoDisponible()}
+    }
+
+    LaunchedEffect(Unit) {
+        actualizarVista()
     }
 
     Scaffold(
@@ -62,8 +70,6 @@ fun ShoppingListScreen(
                     // Columna separada para los textos de presupuesto y totales
                     Column {
                         val total = listaCompraService.calcularTotalLista()
-                        val saldo = listaCompraService.calcularSaldoDisponible()
-
                         Text("Total de la lista: $${"%.2f".format(total)}", style = MaterialTheme.typography.bodyLarge)
                         Text(
                             "Saldo disponible: $${"%.2f".format(saldo)}",
@@ -194,7 +200,7 @@ fun ShoppingListScreen(
                     Button(onClick = {
                         try {
                             val monto = nuevoPresupuesto.toDoubleOrNull() ?: 0.0
-                            listaCompraService.establecerPresupuesto(monto)
+                            coroutineScope.launch{listaCompraService.establecerPresupuesto(monto)}
                             mensajeFeedback = "Presupuesto actualizado correctamente."
                             esError = false
                             mostrarDialogoPresupuesto = false
@@ -294,7 +300,7 @@ fun ShoppingListScreen(
                             try {
                                 val id = productoSeleccionado?.id ?: throw Exception("Debe seleccionar un producto")
                                 val cant = cantidadInput.toIntOrNull() ?: 1
-                                listaCompraService.agregarProducto(id, cant)
+                                coroutineScope.launch{listaCompraService.agregarProducto(id, cant)}
                                 mensajeFeedback = "Producto agregado correctamente."
                                 esError = false
                                 mostrarDialogoAgregar = false

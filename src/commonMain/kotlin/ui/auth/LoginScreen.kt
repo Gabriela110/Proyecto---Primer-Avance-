@@ -14,7 +14,7 @@ import services.AuthErrors
 @Composable
 fun LoginScreen(
     firebaseAuthService: FirebaseAuthService,
-    onLoginSuccess: (Boolean) -> Unit,
+    onLoginSuccess: (String) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -119,12 +119,9 @@ fun LoginScreen(
                         cargando = true
 
                         try {
-                            firebaseAuthService.iniciarSesion(email, password)
-
                             // El rol se determinará al integrar la información
                             // de usuarios con el módulo de Firestore.
-                            onLoginSuccess(false)
-
+                            onLoginSuccess(firebaseAuthService.iniciarSesion(email, password))
                         } catch (e: Exception) {
                             errors = AuthErrors(
                                 general = "No se pudo iniciar sesión. Verificá tu correo y contraseña."

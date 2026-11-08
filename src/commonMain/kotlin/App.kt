@@ -24,7 +24,6 @@ import ui.client.ShoppingListScreen
 
 @Composable
 fun App() {
-
     // Instanciamos los servicios principales
     val authService = remember { AuthService() }
     val firebaseAuthService = remember { FirebaseAuthService() }
@@ -37,7 +36,7 @@ fun App() {
     val scope = rememberCoroutineScope()
 
     // Carga inicial de información
-    categoriaService.cargarCategoriasIniciales()
+    LaunchedEffect(Unit) {/*categoriaService.cargarCategoriasIniciales()*/}
     productoService.cargarProductosIniciales(categoriaService)
     promocionService.cargarPromocionesIniciales(productoService)
 
@@ -61,11 +60,21 @@ fun App() {
                 is Screen.Login -> {
                     LoginScreen(
                         firebaseAuthService = firebaseAuthService,
-                        onLoginSuccess = { esAdministrador ->
-                            if (esAdministrador) {
-                                currentScreen = Screen.AdminDashboard
-                            } else {
-                                currentScreen = Screen.ShoppingList
+                        onLoginSuccess = { uid -> // Recibe el UID que devuelve Firebase al iniciar sesión
+                            scope.launch {
+                                try {
+                                    // Consultamos el rol en Firestore usando el UID (ej: 1 para Admin, 2 para Cliente)
+                                    val rol = firebaseAuthService.obtenerRolUsuario(uid) // O la función que creaste para obtener el rol
+
+                                    if (rol == "admin") {
+                                        currentScreen = Screen.AdminDashboard
+                                    } else {
+                                        currentScreen = Screen.ShoppingList
+                                    }
+                                } catch (e: Exception) {
+                                    // Fallback seguro en caso de error de red o lectura
+                                    currentScreen = Screen.ShoppingList
+                                }
                             }
                         },
                         onNavigateToRegister = {

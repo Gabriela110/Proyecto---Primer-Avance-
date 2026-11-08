@@ -43,7 +43,7 @@ class EstadisticaService(
         return listaCompraService.calcularTotalLista()
     }
 
-    fun obtenerSaldoDisponibleCliente(): Double {
-        return listaCompraService.calcularSaldoDisponible()
+    fun obtenerSaldoDisponibleCliente() {
+        //return listaCompraService.calcularSaldoDisponible()
     }
 }

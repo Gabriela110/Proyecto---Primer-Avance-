@@ -1,9 +1,12 @@
 package services
 
+import config.FirebaseProvider
 import models.Producto
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 
 // Excepciones personalizadas originales
 class ProductoInvalidoException(mensaje: String) : Exception(mensaje)
@@ -21,7 +24,6 @@ object Logger {
         archivoLog.appendText("[$timestamp] ERROR: $mensaje\n")
     }
 }
-
 class ListaCompraService(
     private val productoService: ProductoService
 ) {
@@ -29,10 +31,24 @@ class ListaCompraService(
     private val elementos = mutableMapOf<Producto, Int>()
     private var presupuesto: Double = 0.0
     private var presupuestoEstablecido: Boolean = false
+    // Obtener la instancia actual de autenticación
+    val currentUser = Firebase.auth.currentUser
+    private val db = FirebaseProvider.db
+    //val idUser = currentUser?.uid
+    //val correoUser = currentUser?.email
 
+    suspend fun obtenerPresupuesto(): Double {
+        val qsPresupuesto = db.collection("presupuestos").where{"userId" equalTo currentUser?.uid}.get()
+        var monto: Double = 0.0
+        for (document in qsPresupuesto.documents) {
+            monto = document.get<Double>("monto") ?: 0.0
+        }
+        presupuesto = monto
+        return monto
+    }
     fun obtenerElementos(): Map<Producto, Int> = elementos
 
-    fun agregarProducto(productoId: Int, cantidad: Int) {
+    suspend fun agregarProducto(productoId: Int, cantidad: Int) {
         if (cantidad <= 0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
@@ -88,20 +104,24 @@ class ListaCompraService(
         return elementos.entries.sumOf { (producto, cantidad) -> producto.precio * cantidad }
     }
 
-    fun establecerPresupuesto(monto: Double) {
+    suspend fun establecerPresupuesto(monto: Double) {
         if (monto < 0) {
             throw PresupuestoInvalidoException("El presupuesto no puede ser negativo.")
         }
+        val userId = currentUser?.uid ?: throw IllegalStateException("Usuario no autenticado")
+        val userEmail = currentUser?.email
+        val presupuestoData = mapOf("userId" to userId, "userEmail" to userEmail,"monto" to monto)
+        db.collection("presupuestos").document(userId).set(presupuestoData)
         presupuesto = monto
-        presupuestoEstablecido = true
+        //presupuestoEstablecido = true
     }
 
-    fun calcularSaldoDisponible(): Double {
-        return presupuesto - calcularTotalLista()
+    suspend fun calcularSaldoDisponible(): Double {
+        return obtenerPresupuesto() - calcularTotalLista()
     }
 
     private fun excederiaPresupuesto(montoAdicional: Double): Boolean {
-        if (!presupuestoEstablecido) return false
+        //if (!presupuestoEstablecido) return false
         return (calcularTotalLista() + montoAdicional) > presupuesto
     }
 }

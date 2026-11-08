@@ -176,7 +176,9 @@ fun RegisterScreen(
                         try {
                             firebaseAuthService.registrar(
                                 email = email,
-                                password = password
+                                password = password,
+                                nombre = name,
+                                rol = "cliente"
                             )
 
                             onRegisterSuccess()
