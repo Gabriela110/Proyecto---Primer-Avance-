@@ -1,4 +1,3 @@
-
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -24,7 +23,6 @@ import ui.client.ShoppingListScreen
 
 @Composable
 fun App() {
-    // Instanciamos los servicios principales
     val authService = remember { AuthService() }
     val firebaseAuthService = remember { FirebaseAuthService() }
 
@@ -35,46 +33,35 @@ fun App() {
 
     val scope = rememberCoroutineScope()
 
-    // Carga inicial de información
     LaunchedEffect(Unit) {
         productoService.obtenerProductos()
         promocionService.obtenerPromociones()
     }
 
-
     MaterialTheme {
-
-        // Pantalla inicial
         var currentScreen by remember {
             mutableStateOf<Screen>(Screen.Login)
         }
 
-        // Pantalla a la que regresan las promociones
         var promosVolverA by remember {
             mutableStateOf<Screen>(Screen.ShoppingList)
         }
 
         SuperAppTheme {
-
             when (currentScreen) {
-
-                // LOGIN
                 is Screen.Login -> {
                     LoginScreen(
                         firebaseAuthService = firebaseAuthService,
-                        onLoginSuccess = { uid -> // Recibe el UID que devuelve Firebase al iniciar sesión
+                        onLoginSuccess = { uid ->
                             scope.launch {
                                 try {
-                                    // Consultamos el rol en Firestore usando el UID (ej: 1 para Admin, 2 para Cliente)
-                                    val rol = firebaseAuthService.obtenerRolUsuario(uid) // O la función que creaste para obtener el rol
-
+                                    val rol = firebaseAuthService.obtenerRolUsuario(uid)
                                     if (rol == "admin") {
                                         currentScreen = Screen.AdminDashboard
                                     } else {
                                         currentScreen = Screen.ShoppingList
                                     }
                                 } catch (e: Exception) {
-                                    // Fallback seguro en caso de error de red o lectura
                                     currentScreen = Screen.ShoppingList
                                 }
                             }
@@ -85,7 +72,6 @@ fun App() {
                     )
                 }
 
-                // REGISTRO
                 is Screen.Register -> {
                     RegisterScreen(
                         firebaseAuthService = firebaseAuthService,
@@ -101,7 +87,6 @@ fun App() {
                     )
                 }
 
-                // PANEL ADMINISTRADOR
                 is Screen.AdminDashboard -> {
                     AdminDashboardScreen(
                         authService = authService,
@@ -127,15 +112,12 @@ fun App() {
                     )
                 }
 
-                // LISTA DE COMPRAS
                 is Screen.ShoppingList -> {
                     ShoppingListScreen(
                         authService = authService,
                         listaCompraService = listaCompraService,
                         productoService = productoService,
-                        onBack = {
-                            // Definir posteriormente
-                        },
+                        onBack = {},
                         onLogout = {
                             scope.launch {
                                 firebaseAuthService.cerrarSesion()
@@ -149,7 +131,6 @@ fun App() {
                     )
                 }
 
-                // USUARIOS
                 is Screen.Users -> {
                     UsuariosScreen(
                         authService = authService,
@@ -159,7 +140,6 @@ fun App() {
                     )
                 }
 
-                // PRODUCTOS
                 is Screen.Products -> {
                     ProductManagementScreen(
                         productoService = productoService,
@@ -170,7 +150,6 @@ fun App() {
                     )
                 }
 
-                // CATEGORÍAS
                 is Screen.Categories -> {
                     CategoryManagementScreen(
                         categoriaService = categoriaService,
@@ -180,7 +159,6 @@ fun App() {
                     )
                 }
 
-                // PROMOCIONES
                 is Screen.Promotions -> {
                     PromocionesScreen(
                         promocionService = promocionService,
@@ -188,32 +166,23 @@ fun App() {
                         onBack = {
                             currentScreen = promosVolverA
                         },
-                        mostrarBarraInferior =
-                            promosVolverA == Screen.ShoppingList,
-                        modoAdmin =
-                            promosVolverA == Screen.AdminDashboard,
+                        mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
+                        modoAdmin = promosVolverA == Screen.AdminDashboard,
                         onNavigate = { tab ->
                             when (tab) {
                                 ClientTab.INICIO,
                                 ClientTab.LISTAS -> {
                                     currentScreen = Screen.ShoppingList
                                 }
-
                                 else -> Unit
                             }
                         }
                     )
                 }
 
-                // ESTADÍSTICAS
-                is Screen.Statistics -> {
-                    // Aquí pondremos la vista de Estadísticas
-                }
+                is Screen.Statistics -> {}
 
-                // RESTO DE PANTALLAS
-                else -> {
-                    // Pantallas pendientes
-                }
+                else -> {}
             }
         }
     }

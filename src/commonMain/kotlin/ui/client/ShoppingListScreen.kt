@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import models.Categoria
 import models.Producto
 import services.*
 
@@ -29,7 +28,6 @@ fun ShoppingListScreen(
     onNavigateToPromociones: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var presupuestoStr by rememberSaveable { mutableStateOf("") }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
     var productosDisponibles by remember { mutableStateOf<List<Producto>>(emptyList()) }
@@ -37,15 +35,27 @@ fun ShoppingListScreen(
     // Estados para diálogos modales de acciones
     var mostrarDialogoPresupuesto by remember { mutableStateOf(false) }
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
+    var productoModificando by remember { mutableStateOf<Pair<Producto, Int>?>(null) }
 
-    // Refrescar estados de la lista
-    var elementos by remember { mutableStateOf(listaCompraService.obtenerElementos()) }
-    var presupuestoActual by remember { mutableStateOf(0.0) } // O el valor que devuelva tu servicio
+    // Estados corregidos con valor inicial explícito y tipado seguro para Compose
+    var elementos: Map<Producto, Int> by remember { mutableStateOf(emptyMap()) }
     var saldo by remember { mutableStateOf(0.0) }
+    var cargando by remember { mutableStateOf(true) }
 
     fun actualizarVista() {
-        elementos = listaCompraService.obtenerElementos()
-        coroutineScope.launch{saldo = listaCompraService.calcularSaldoDisponible()}
+        coroutineScope.launch {
+            try {
+                cargando = true
+                elementos = listaCompraService.obtenerElementos()
+                saldo = listaCompraService.calcularSaldoDisponible()
+                esError = false
+            } catch (e: Exception) {
+                mensajeFeedback = e.message ?: "Error al actualizar la lista"
+                esError = true
+            } finally {
+                cargando = false
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -64,13 +74,11 @@ fun ShoppingListScreen(
             )
         },
         bottomBar = {
-            // Barra inferior con totales y saldo disponible
             Surface(
                 tonalElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth().navigationBarsPadding()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Columna separada para los textos de presupuesto y totales
                     Column {
                         val total = listaCompraService.calcularTotalLista()
                         Text("Total de la lista: $${"%.2f".format(total)}", style = MaterialTheme.typography.bodyLarge)
@@ -92,7 +100,6 @@ fun ShoppingListScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Botón de cierre de sesión ubicado ordenadamente abajo
                     TextButton(
                         onClick = {
                             authService.cerrarSesion()
@@ -113,7 +120,6 @@ fun ShoppingListScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Botones de acciones principales (Equivalentes al menú 1, 2 y 6 de consola)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -144,8 +150,11 @@ fun ShoppingListScreen(
             Text("Tu Lista de Compras", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
 
-            // Lista de elementos visuales (Equivalente a la opción 5 de consola)
-            if (elementos.isEmpty()) {
+            if (cargando) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (elementos.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("La lista de compras está vacía.", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -176,7 +185,29 @@ fun ShoppingListScreen(
                                     Text("Subtotal: $${"%.2f".format(subtotal)}", style = MaterialTheme.typography.bodyMedium)
                                 }
 
-                                // Botones de modificar/eliminar...
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    TextButton(onClick = { productoModificando = Pair(producto, cantidad) }) {
+                                        Text("Editar")
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                try {
+                                                    listaCompraService.eliminarProducto(producto.id)
+                                                    mensajeFeedback = "Producto eliminado de la lista."
+                                                    esError = false
+                                                    actualizarVista()
+                                                } catch (e: Exception) {
+                                                    mensajeFeedback = e.message ?: "Error al eliminar producto"
+                                                    esError = true
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                    ) {
+                                        Text("Eliminar")
+                                    }
+                                }
                             }
                         }
                     }
@@ -184,7 +215,7 @@ fun ShoppingListScreen(
             }
         }
 
-        // Diálogo para establecer presupuesto (Opción 1)
+        // Diálogo para establecer presupuesto
         if (mostrarDialogoPresupuesto) {
             var nuevoPresupuesto by remember { mutableStateOf("") }
             AlertDialog(
@@ -201,16 +232,23 @@ fun ShoppingListScreen(
                 },
                 confirmButton = {
                     Button(onClick = {
-                        try {
-                            val monto = nuevoPresupuesto.toDoubleOrNull() ?: 0.0
-                            coroutineScope.launch{listaCompraService.establecerPresupuesto(monto)}
-                            mensajeFeedback = "Presupuesto actualizado correctamente."
-                            esError = false
-                            mostrarDialogoPresupuesto = false
-                            actualizarVista()
-                        } catch (e: Exception) {
-                            mensajeFeedback = e.message ?: "Error al establecer presupuesto"
+                        val monto = nuevoPresupuesto.toDoubleOrNull()
+                        if (monto == null || monto < 0) {
+                            mensajeFeedback = "Ingrese un monto numérico válido."
                             esError = true
+                            return@Button
+                        }
+                        coroutineScope.launch {
+                            try {
+                                listaCompraService.establecerPresupuesto(monto)
+                                mensajeFeedback = "Presupuesto actualizado correctamente."
+                                esError = false
+                                mostrarDialogoPresupuesto = false
+                                actualizarVista()
+                            } catch (e: Exception) {
+                                mensajeFeedback = e.message ?: "Error al establecer presupuesto"
+                                esError = true
+                            }
                         }
                     }) {
                         Text("Guardar")
@@ -222,13 +260,23 @@ fun ShoppingListScreen(
             )
         }
 
-        // Diálogo para agregar producto del catálogo (opcion 2)
+        // Diálogo para agregar producto del catálogo
         if (mostrarDialogoAgregar) {
             LaunchedEffect(Unit) {
-                productosDisponibles = productoService.obtenerProductos()
+                try {
+                    productosDisponibles = productoService.obtenerProductos()
+                } catch (e: Exception) {
+                    productosDisponibles = emptyList()
+                }
             }
-            var productoSeleccionado by remember { mutableStateOf(productosDisponibles.firstOrNull()) }
+            var productoSeleccionado by remember { mutableStateOf<Producto?>(null) }
             var cantidadInput by remember { mutableStateOf("1") }
+
+            LaunchedEffect(productosDisponibles) {
+                if (productosDisponibles.isNotEmpty() && productoSeleccionado == null) {
+                    productoSeleccionado = productosDisponibles.first()
+                }
+            }
 
             AlertDialog(
                 onDismissRequest = { mostrarDialogoAgregar = false },
@@ -245,7 +293,6 @@ fun ShoppingListScreen(
                         Spacer(Modifier.height(8.dp))
 
                         if (productosDisponibles.isEmpty()) {
-                            // Leyenda cuando no hay productos disponibles
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -259,7 +306,6 @@ fun ShoppingListScreen(
                                 )
                             }
                         } else {
-                            // Lista scrolleable de productos disponibles
                             LazyColumn(
                                 modifier = Modifier
                                     .weight(1f)
@@ -279,7 +325,7 @@ fun ShoppingListScreen(
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
                                             Text(p.nombre, style = MaterialTheme.typography.bodyLarge)
-                                            Text("Precio: $${p.precio}", style = MaterialTheme.typography.bodySmall)
+                                            Text("Precio: $${"%.2f".format(p.precio)}", style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                 }
@@ -288,7 +334,6 @@ fun ShoppingListScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-                        // Campo para ingresar la cantidad
                         OutlinedTextField(
                             value = cantidadInput,
                             onValueChange = { cantidadInput = it },
@@ -302,29 +347,97 @@ fun ShoppingListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            try {
-                                val id = productoSeleccionado?.id ?: throw Exception("Debe seleccionar un producto")
-                                val cant = cantidadInput.toIntOrNull() ?: 1
-                                coroutineScope.launch{listaCompraService.agregarProducto(id, cant)}
-                                mensajeFeedback = "Producto agregado correctamente."
-                                esError = false
-                                mostrarDialogoAgregar = false
-                                actualizarVista()
-                            } catch (e: PresupuestoExcedidoException) {
-                                mensajeFeedback = "🚫 ${e.message}"
+                            val id = productoSeleccionado?.id
+                            val cant = cantidadInput.toIntOrNull() ?: 0
+
+                            if (id == null) {
+                                mensajeFeedback = "Debe seleccionar un producto."
                                 esError = true
-                            } catch (e: Exception) {
-                                mensajeFeedback = e.message ?: "Error al agregar producto"
+                                return@Button
+                            }
+                            if (cant <= 0) {
+                                mensajeFeedback = "La cantidad debe ser mayor a 0."
                                 esError = true
+                                return@Button
+                            }
+
+                            coroutineScope.launch {
+                                try {
+                                    listaCompraService.agregarProducto(id, cant)
+                                    mensajeFeedback = "Producto agregado correctamente."
+                                    esError = false
+                                    mostrarDialogoAgregar = false
+                                    actualizarVista()
+                                } catch (e: PresupuestoExcedidoException) {
+                                    mensajeFeedback = "🚫 ${e.message}"
+                                    esError = true
+                                } catch (e: Exception) {
+                                    mensajeFeedback = e.message ?: "Error al agregar producto"
+                                    esError = true
+                                }
                             }
                         },
-                        enabled = productosDisponibles.isNotEmpty() // Deshabilita el botón si no hay productos
+                        enabled = productosDisponibles.isNotEmpty()
                     ) {
                         Text("Agregar")
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { mostrarDialogoAgregar = false }) { Text("Cancelar") }
+                }
+            )
+        }
+
+        // Diálogo para modificar cantidad
+        productoModificando?.let { (prod, cantActual) ->
+            var nuevaCantidadInput by remember { mutableStateOf(cantActual.toString()) }
+
+            AlertDialog(
+                onDismissRequest = { productoModificando = null },
+                title = { Text("Modificar Cantidad") },
+                text = {
+                    Column {
+                        Text("Producto: ${prod.nombre}", style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = nuevaCantidadInput,
+                            onValueChange = { nuevaCantidadInput = it },
+                            label = { Text("Nueva Cantidad") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        val nuevaCant = nuevaCantidadInput.toIntOrNull() ?: 0
+                        if (nuevaCant <= 0) {
+                            mensajeFeedback = "La cantidad debe ser mayor a 0."
+                            esError = true
+                            return@Button
+                        }
+
+                        coroutineScope.launch {
+                            try {
+                                listaCompraService.modificarCantidad(prod.id, nuevaCant)
+                                mensajeFeedback = "Cantidad actualizada correctamente."
+                                esError = false
+                                productoModificando = null
+                                actualizarVista()
+                            } catch (e: PresupuestoExcedidoException) {
+                                mensajeFeedback = "🚫 ${e.message}"
+                                esError = true
+                            } catch (e: Exception) {
+                                mensajeFeedback = e.message ?: "Error al modificar la cantidad"
+                                esError = true
+                            }
+                        }
+                    }) {
+                        Text("Guardar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { productoModificando = null }) { Text("Cancelar") }
                 }
             )
         }

@@ -35,11 +35,13 @@ class EstadisticaService(
     // ==========================================================
 
     fun obtenerProductosDistintosCliente(): Int {
-        return listaCompraService.obtenerElementos().size
+        //return listaCompraService.obtenerElementos().size
+        return 1
     }
 
     fun obtenerUnidadesTotalesCliente(): Int {
-        return listaCompraService.obtenerElementos().values.sum()
+        //return listaCompraService.obtenerElementos().values.sum()
+        return 1
     }
 
     fun obtenerTotalCompraCliente(): Double {
