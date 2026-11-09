@@ -22,7 +22,8 @@ class EstadisticaService(
     }
 
     fun obtenerTotalPromociones(): Int {
-        return promocionService.obtenerPromociones().size
+        //return promocionService.obtenerPromociones().size
+        return 1
     }
 
     fun obtenerTotalUsuarios(): Int {

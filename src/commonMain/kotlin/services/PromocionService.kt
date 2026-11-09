@@ -1,60 +1,106 @@
 package services
 
+import config.FirebaseProvider
 import models.Promocion
 
 class PromocionService {
 
-    private val promociones = mutableListOf<Promocion>()
-    private var siguientePromocionId = 1
+    private val db = FirebaseProvider.db
 
-    // Promociones de ejemplo para que la pantalla no inicie vacía (solo si no hay ninguna)
-    suspend fun cargarPromocionesIniciales(productoService: ProductoService) {
-        if (promociones.isNotEmpty()) return
-        val productos = productoService.obtenerProductos()
-
-        productos.firstOrNull { it.nombre.startsWith("Detergente") }
-            ?.let { agregarPromocion("En productos de limpieza", 20.0, it.id) }
-        productos.firstOrNull { it.nombre.startsWith("Agua") }
-            ?.let { agregarPromocion("En bebidas seleccionadas", 10.0, it.id) }
-        productos.firstOrNull { it.nombre.startsWith("Cereal") }
-            ?.let { agregarPromocion("En cereales", 15.0, it.id) }
+    suspend fun obtenerPromociones(): List<Promocion> {
+        return try {
+            val snapshot = db.collection("promociones").get()
+            snapshot.documents.map { document ->
+                Promocion(
+                    id = document.get<Int?>("id") ?: 0,
+                    nombre = document.get<String?>("nombre") ?: "",
+                    descuento = document.get<Double?>("descuento") ?: 0.0,
+                    productoId = document.get<String?>("productoId") ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    fun obtenerPromociones(): List<Promocion> {
-        return promociones
+
+    suspend fun buscarPorId(id: Int): Promocion? {
+        return try {
+            val snapshot = db.collection("promociones")
+                .where { "id" equalTo id }
+                .get()
+
+            snapshot.documents.firstOrNull()?.let { document ->
+                Promocion(
+                    id = document.get<Int?>("id") ?: id,
+                    nombre = document.get<String?>("nombre") ?: "",
+                    descuento = document.get<Double?>("descuento") ?: 0.0,
+                    productoId = document.get<String?>("productoId") ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    fun buscarPorId(id: Int): Promocion? {
-        return promociones.find { it.id == id }
-    }
+    suspend fun agregarPromocion(nombre: String, descuento: Double, productoId: String): Promocion {
+        // Obtenemos un nuevo ID autoincremental basado en las promociones existentes
+        val actuales = obtenerPromociones()
+        val nuevoId = (actuales.maxOfOrNull { it.id } ?: 0) + 1
 
-    fun agregarPromocion(nombre: String, descuento: Double, productoId: String): Promocion {
         val nuevaPromocion = Promocion(
-            id = siguientePromocionId,
+            id = nuevoId,
             nombre = nombre,
             descuento = descuento,
             productoId = productoId
         )
-        promociones.add(nuevaPromocion)
-        siguientePromocionId++
+
+        // Guardamos en Firestore usando un id de documento automático pero guardando el campo "id" interno
+        val docRef = db.collection("promociones").add(
+            mapOf(
+                "id" to nuevaPromocion.id,
+                "nombre" to nuevaPromocion.nombre,
+                "descuento" to nuevaPromocion.descuento,
+                "productoId" to nuevaPromocion.productoId
+            )
+        )
+
         return nuevaPromocion
     }
 
-    // Edita nombre, descuento y producto de una promoción existente
-    fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: String): Boolean {
-        val promocion = buscarPorId(id) ?: return false
-        promocion.nombre = nombre
-        promocion.descuento = descuento
-        promocion.productoId = productoId
-        return true
+    suspend fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: String): Boolean {
+        return try {
+            val snapshot = db.collection("promociones")
+                .where { "id" equalTo id }
+                .get()
+
+            val document = snapshot.documents.firstOrNull() ?: return false
+
+            // Actualizamos los campos en Firestore
+            db.collection("promociones").document(document.id).update(
+                mapOf(
+                    "nombre" to nombre,
+                    "descuento" to descuento,
+                    "productoId" to productoId
+                )
+            )
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
-    fun eliminarPromocion(promocion: Promocion): Boolean {
-        return promociones.remove(promocion)
-    }
+    suspend fun eliminarPromocion(promocion: Promocion): Boolean {
+        return try {
+            val snapshot = db.collection("promociones")
+                .where { "id" equalTo promocion.id }
+                .get()
 
-    // Método para eliminar promociones cuando se borra un producto
-    fun eliminarPorProductoId(productoId: Int) {
-        //promociones.removeIf { it.productoId == productoId }
+            val document = snapshot.documents.firstOrNull() ?: return false
+            db.collection("promociones").document(document.id).delete()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

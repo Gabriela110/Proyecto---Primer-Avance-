@@ -38,7 +38,7 @@ fun App() {
     // Carga inicial de información
     LaunchedEffect(Unit) {
         productoService.obtenerProductos()
-        promocionService.cargarPromocionesIniciales(productoService)
+        promocionService.obtenerPromociones()
     }
 
 

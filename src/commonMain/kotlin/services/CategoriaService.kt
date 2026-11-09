@@ -8,16 +8,6 @@ class CategoriaService {
     private val db = FirebaseProvider.db
     private val utils = Utils()
     private val categorias = mutableListOf<Categoria>()
-    private var siguienteCategoriaId = 1
-
-    /*suspend fun cargarCategoriasIniciales() {
-        if (categorias.isEmpty()) {
-            agregarCategoria("Alimentos")
-            agregarCategoria("Bebidas")
-            agregarCategoria("Limpieza")
-            agregarCategoria("Higiene personal")
-        }
-    }*/
 
     suspend fun obtenerCategorias(): List<Categoria> {
         val qsCategorias = db.collection("categorias").get()
@@ -28,10 +18,6 @@ class CategoriaService {
             )
         }
         return categorias
-    }
-
-    fun buscarPorId(id: Int): Int {
-        return 1
     }
 
     suspend fun agregarCategoria(nombre: String): String {
