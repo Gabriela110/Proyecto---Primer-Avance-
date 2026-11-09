@@ -28,3 +28,17 @@ Implementación de Jetpack Compose para la creación de vistas de la interfaz de
 Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1lyhX0df50UJZyqPjp-dPCXxjtRvpcRJs/view?usp=sharing
 
 Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: https://drive.google.com/file/d/1wAZ5QdSYwYYhLESp5ZhJpj6JOJ1zI4E2/view?usp=sharing
+
+
+## Avance 2 de implementacion final (Foro 2): 8/11/2026
+Implementación de Firebase para la autenticación y persistencia de datos. Ahora todo lo hecho dentro de la app quedará guardado en su respectiva base de datos.
+
+### Indicaciones:
+* Para ingresar como adminitstrador, utilizar las credenciales admin@superselectos.com y contraseña admin123
+* Para ingresar como cliente, utilizar las credenciales neris@correo.com y contraseña 123456 o crear un nuevo usuario desde la pantalla de registro
+* Dependiendo del tipo de usuario con el que se ingresó, se mostrará las pantallas respectivas para cada uno
+
+### Videodemostración
+Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1uucel66D2Ge1QKVI2bSzCL4YFDwhhwZ1/view?usp=sharing
+
+Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY_wB3423CHET/view?usp=sharing
