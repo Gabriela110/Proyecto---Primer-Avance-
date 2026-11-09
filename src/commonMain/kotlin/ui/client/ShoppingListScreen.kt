@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import models.Categoria
+import models.Producto
 import services.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +32,7 @@ fun ShoppingListScreen(
     var presupuestoStr by rememberSaveable { mutableStateOf("") }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
+    var productosDisponibles by remember { mutableStateOf<List<Producto>>(emptyList()) }
 
     // Estados para diálogos modales de acciones
     var mostrarDialogoPresupuesto by remember { mutableStateOf(false) }
@@ -221,7 +224,9 @@ fun ShoppingListScreen(
 
         // Diálogo para agregar producto del catálogo (opcion 2)
         if (mostrarDialogoAgregar) {
-            val productosDisponibles = productoService.obtenerProductos()
+            LaunchedEffect(Unit) {
+                productosDisponibles = productoService.obtenerProductos()
+            }
             var productoSeleccionado by remember { mutableStateOf(productosDisponibles.firstOrNull()) }
             var cantidadInput by remember { mutableStateOf("1") }
 

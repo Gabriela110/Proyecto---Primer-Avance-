@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import models.Categoria
 import services.CategoriaService
 import ui.components.EncabezadoVerde
 
@@ -19,14 +20,20 @@ fun CategoryManagementScreen(
     onBack: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var categorias by remember { mutableStateOf(categoriaService.obtenerCategorias()) }
+    var categorias by remember { mutableStateOf<List<Categoria>>(emptyList()) }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
 
     var mostrarDialogoCrear by remember { mutableStateOf(false) }
 
     fun actualizarLista() {
-        categorias = categoriaService.obtenerCategorias()
+        coroutineScope.launch {
+            categorias = categoriaService.obtenerCategorias()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        actualizarLista()
     }
 
     Scaffold(

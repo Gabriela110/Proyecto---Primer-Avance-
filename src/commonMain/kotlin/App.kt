@@ -36,9 +36,11 @@ fun App() {
     val scope = rememberCoroutineScope()
 
     // Carga inicial de información
-    LaunchedEffect(Unit) {/*categoriaService.cargarCategoriasIniciales()*/}
-    productoService.cargarProductosIniciales(categoriaService)
-    promocionService.cargarPromocionesIniciales(productoService)
+    LaunchedEffect(Unit) {
+        productoService.obtenerProductos()
+        promocionService.cargarPromocionesIniciales(productoService)
+    }
+
 
     MaterialTheme {
 

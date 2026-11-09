@@ -10,6 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import models.Categoria
+import models.Producto
 import services.CategoriaService
 import services.ProductoService
 import ui.components.EncabezadoVerde
@@ -21,8 +24,9 @@ fun ProductManagementScreen(
     categoriaService: CategoriaService,
     onBack: () -> Unit
 ) {
-    // El estado toma la lista inicial gracias al .toList() del servicio
-    var productos by remember { mutableStateOf(productoService.obtenerProductos()) }
+    val coroutineScope = rememberCoroutineScope()
+    var productos by remember { mutableStateOf<List<Producto>>(emptyList()) }
+    var categorias by remember { mutableStateOf<List<Categoria>>(emptyList()) }
     var mensajeFeedback by remember { mutableStateOf<String?>(null) }
     var esError by remember { mutableStateOf(false) }
 
@@ -30,7 +34,13 @@ fun ProductManagementScreen(
 
     // Función que refresca el estado con la nueva referencia de la lista
     fun actualizarLista() {
-        productos = productoService.obtenerProductos()
+        coroutineScope.launch {
+            productos = productoService.obtenerProductos()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        actualizarLista()
     }
 
     Scaffold(
@@ -89,9 +99,9 @@ fun ProductManagementScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("ID: ${producto.id} - ${producto.nombre}", style = MaterialTheme.typography.bodyLarge)
+                                    Text(producto.nombre, style = MaterialTheme.typography.bodyLarge)
                                     Text("Precio: $${producto.precio} | Stock: ${producto.stock}")
-                                    Text("Categoría: ${producto.categoria.nombre}", style = MaterialTheme.typography.bodySmall)
+                                    /*CAMBIAR SLUG DE CATEGORIA A SU NOMBRE*/ Text("Categoría: ${producto.categoria}", style = MaterialTheme.typography.bodySmall)
                                 }
 
                                 // Botón para eliminar
@@ -120,11 +130,13 @@ fun ProductManagementScreen(
 
         // Diálogo para Crear Producto
         if (mostrarDialogoCrear) {
-            val categorias = categoriaService.obtenerCategorias()
+            LaunchedEffect(Unit) {
+                categorias = categoriaService.obtenerCategorias()
+            }
             var nombreInput by remember { mutableStateOf("") }
             var precioInput by remember { mutableStateOf("") }
             var stockInput by remember { mutableStateOf("") }
-            var categoriaSeleccionada by remember { mutableStateOf(categorias.firstOrNull()) }
+            var categoriaSeleccionada by remember { mutableStateOf<Categoria?>(null) }
 
             AlertDialog(
                 onDismissRequest = { mostrarDialogoCrear = false },
@@ -200,7 +212,7 @@ fun ProductManagementScreen(
                                 val stock = stockInput.toIntOrNull() ?: throw Exception("Stock inválido")
                                 val cat = categoriaSeleccionada ?: throw Exception("Debe seleccionar una categoría")
 
-                                productoService.agregarProducto(nombreInput, precio, stock, cat)
+                                coroutineScope.launch{productoService.agregarProducto(nombreInput, precio, stock, cat.id)}
                                 mensajeFeedback = "Producto creado correctamente."
                                 esError = false
                                 mostrarDialogoCrear = false

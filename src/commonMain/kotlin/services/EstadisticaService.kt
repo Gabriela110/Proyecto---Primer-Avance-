@@ -12,11 +12,13 @@ class EstadisticaService(
     // ==========================================================
 
     fun obtenerTotalCategorias(): Int {
-        return categoriaService.obtenerCategorias().size
+        //return categoriaService.obtenerCategorias().size
+        return 1
     }
 
     fun obtenerTotalProductos(): Int {
-        return productoService.obtenerProductos().size
+        //return productoService.obtenerProductos().size
+        return 1
     }
 
     fun obtenerTotalPromociones(): Int {

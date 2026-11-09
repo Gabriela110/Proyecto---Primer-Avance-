@@ -32,23 +32,22 @@ class ListaCompraService(
     private var presupuesto: Double = 0.0
     private var presupuestoEstablecido: Boolean = false
     // Obtener la instancia actual de autenticación
-    val currentUser = Firebase.auth.currentUser
     private val db = FirebaseProvider.db
-    //val idUser = currentUser?.uid
-    //val correoUser = currentUser?.email
+
 
     suspend fun obtenerPresupuesto(): Double {
+        val currentUser = Firebase.auth.currentUser
         val qsPresupuesto = db.collection("presupuestos").where{"userId" equalTo currentUser?.uid}.get()
         var monto: Double = 0.0
         for (document in qsPresupuesto.documents) {
             monto = document.get<Double>("monto") ?: 0.0
         }
         presupuesto = monto
-        return monto
+        return presupuesto
     }
     fun obtenerElementos(): Map<Producto, Int> = elementos
 
-    suspend fun agregarProducto(productoId: Int, cantidad: Int) {
+    suspend fun agregarProducto(productoId: String, cantidad: Int) {
         if (cantidad <= 0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
@@ -70,14 +69,14 @@ class ListaCompraService(
         elementos[producto] = cantidadActual + cantidad
     }
 
-    fun eliminarProducto(productoId: Int) {
+    fun eliminarProducto(productoId: String) {
         val producto = elementos.keys.find { it.id == productoId }
             ?: throw ProductoNoEncontradoException("No se encontró el producto con ID $productoId en la lista.")
 
         elementos.remove(producto)
     }
 
-    fun modificarCantidad(productoId: Int, nuevaCantidad: Int) {
+    fun modificarCantidad(productoId: String, nuevaCantidad: Int) {
         if (nuevaCantidad <= 0) {
             throw ProductoInvalidoException("La cantidad debe ser mayor a 0.")
         }
@@ -105,11 +104,12 @@ class ListaCompraService(
     }
 
     suspend fun establecerPresupuesto(monto: Double) {
+        val currentUser = Firebase.auth.currentUser
         if (monto < 0) {
             throw PresupuestoInvalidoException("El presupuesto no puede ser negativo.")
         }
         val userId = currentUser?.uid ?: throw IllegalStateException("Usuario no autenticado")
-        val userEmail = currentUser?.email
+        val userEmail = currentUser.email
         val presupuestoData = mapOf("userId" to userId, "userEmail" to userEmail,"monto" to monto)
         db.collection("presupuestos").document(userId).set(presupuestoData)
         presupuesto = monto

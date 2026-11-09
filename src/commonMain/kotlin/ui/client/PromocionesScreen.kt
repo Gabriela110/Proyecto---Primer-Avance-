@@ -54,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import models.Producto
 import models.Promocion
 import services.ProductoService
@@ -79,8 +81,6 @@ import kotlin.math.roundToInt
  *
  * - Cliente (modoAdmin = false): ve las promociones, busca y filtra por categoría.
  * - Administrador (modoAdmin = true): además puede CREAR, EDITAR y ELIMINAR promociones.
- *
- * Los datos salen de PromocionService y ProductoService (los mismos de la Etapa 2).
  */
 @Composable
 fun PromocionesScreen(
@@ -91,19 +91,24 @@ fun PromocionesScreen(
     mostrarBarraInferior: Boolean = true,
     modoAdmin: Boolean = false
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var busqueda by rememberSaveable { mutableStateOf("") }
     var categoriaSeleccionada by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Los servicios guardan listas simples (no observables): este contador fuerza a refrescar
-    // la pantalla después de crear, editar o eliminar.
+    // Contador que fuerza a refrescar la pantalla tras operaciones CRUD
     var version by remember { mutableStateOf(0) }
 
     var mostrarFormulario by remember { mutableStateOf(false) }
     var promoEnEdicion by remember { mutableStateOf<Promocion?>(null) }
     var promoAEliminar by remember { mutableStateOf<Promocion?>(null) }
 
+    // Estados reactivos para la información asíncrona de Firestore
+    var todasItems by remember { mutableStateOf<List<PromoItem>>(emptyList()) }
+    var productosDisponibles by remember { mutableStateOf<List<Producto>>(emptyList()) }
+
     val snackbarHostState = remember { SnackbarHostState() }
     var mensaje by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(mensaje) {
         mensaje?.let {
             snackbarHostState.showSnackbar(it)
@@ -111,21 +116,27 @@ fun PromocionesScreen(
         }
     }
 
-    val todas = version.let {
-        promocionService.obtenerPromociones().map { promo ->
-            PromoItem(promo, productoService.buscarPorId(promo.productoId))
+    // Cargar promociones y productos asíncronamente cuando cambie la versión o inicie la pantalla
+    LaunchedEffect(version) {
+        val promos = promocionService.obtenerPromociones()
+        val prods = productoService.obtenerProductos()
+        productosDisponibles = prods
+
+        todasItems = promos.map { promo ->
+            PromoItem(promo, prods.firstOrNull { it.id == promo.productoId })
         }
     }
-    val categorias = todas.mapNotNull { it.producto?.categoria?.nombre }.distinct()
 
-    val filtradas = todas.filter { item ->
+    val categorias = todasItems.mapNotNull { it.producto?.categoria }.distinct()
+
+    val filtradas = todasItems.filter { item ->
         val texto = busqueda.trim()
         val coincideTexto = texto.isEmpty() ||
-            item.promocion.nombre.contains(texto, ignoreCase = true) ||
-            item.producto?.nombre?.contains(texto, ignoreCase = true) == true ||
-            item.producto?.categoria?.nombre?.contains(texto, ignoreCase = true) == true
+                item.promocion.nombre.contains(texto, ignoreCase = true) ||
+                item.producto?.nombre?.contains(texto, ignoreCase = true) == true ||
+                item.producto?.categoria?.contains(texto, ignoreCase = true) == true
         val coincideCategoria = categoriaSeleccionada == null ||
-            item.producto?.categoria?.nombre == categoriaSeleccionada
+                item.producto?.categoria == categoriaSeleccionada
         coincideTexto && coincideCategoria
     }
 
@@ -150,12 +161,6 @@ fun PromocionesScreen(
                     text = { Text("Nueva promoción") }
                 )
             }
-        },
-        bottomBar = {
-//            IMPLEMENTAR BARRA INFERIOR POSTERIORMENTE
-//            if (mostrarBarraInferior) {
-//                ClientBottomBar(seleccionada = ClientTab.PROMOS, onNavigate = onNavigate)
-//            }
         }
     ) { innerPadding ->
         Column(
@@ -173,14 +178,16 @@ fun PromocionesScreen(
 
             if (filtradas.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = when {
-                            todas.isEmpty() && modoAdmin ->
+                            todasItems.isEmpty() && modoAdmin ->
                                 "Aún no hay promociones. Tocá «Nueva promoción» para crear la primera."
-                            todas.isEmpty() -> "Aún no hay promociones disponibles."
+                            todasItems.isEmpty() -> "Aún no hay promociones disponibles."
                             else -> "No encontramos promociones con ese filtro."
                         },
                         style = MaterialTheme.typography.bodyMedium,
@@ -191,7 +198,6 @@ fun PromocionesScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    // Espacio extra abajo para que el botón flotante no tape la última tarjeta
                     contentPadding = PaddingValues(
                         start = 16.dp, end = 16.dp, top = 4.dp,
                         bottom = if (modoAdmin) 88.dp else 16.dp
@@ -219,19 +225,21 @@ fun PromocionesScreen(
     if (mostrarFormulario) {
         FormularioPromocion(
             inicial = promoEnEdicion,
-            productos = productoService.obtenerProductos(),
+            productos = productosDisponibles,
             onGuardar = { nombre, descuento, productoId ->
-                val editando = promoEnEdicion
-                if (editando == null) {
-                    promocionService.agregarPromocion(nombre, descuento, productoId)
-                    mensaje = "Promoción creada correctamente."
-                } else {
-                    promocionService.actualizarPromocion(editando.id, nombre, descuento, productoId)
-                    mensaje = "Promoción actualizada correctamente."
+                coroutineScope.launch {
+                    val editando = promoEnEdicion
+                    if (editando == null) {
+                        promocionService.agregarPromocion(nombre, descuento, productoId)
+                        mensaje = "Promoción creada correctamente."
+                    } else {
+                        promocionService.actualizarPromocion(editando.id, nombre, descuento, productoId)
+                        mensaje = "Promoción actualizada correctamente."
+                    }
+                    version += 1
+                    mostrarFormulario = false
+                    promoEnEdicion = null
                 }
-                version += 1
-                mostrarFormulario = false
-                promoEnEdicion = null
             },
             onCancelar = {
                 mostrarFormulario = false
@@ -249,10 +257,12 @@ fun PromocionesScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        promocionService.eliminarPromocion(promo)
-                        mensaje = "Promoción eliminada."
-                        version += 1
-                        promoAEliminar = null
+                        coroutineScope.launch {
+                            promocionService.eliminarPromocion(promo)
+                            mensaje = "Promoción eliminada."
+                            version += 1
+                            promoAEliminar = null
+                        }
                     }
                 ) { Text("Eliminar") }
             },
@@ -412,7 +422,6 @@ private fun TarjetaPromocion(
 
                 Spacer(Modifier.width(12.dp))
 
-                // No hay fotos de productos en el proyecto: se usa un ícono según la categoría
                 Box(
                     modifier = Modifier
                         .size(72.dp)
@@ -420,7 +429,7 @@ private fun TarjetaPromocion(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = iconoPorCategoria(producto?.categoria?.nombre),
+                        imageVector = iconoPorCategoria(producto?.categoria),
                         contentDescription = null,
                         modifier = Modifier.size(36.dp)
                     )
@@ -444,12 +453,12 @@ private fun TarjetaPromocion(
     }
 }
 
-/** Formulario para crear (inicial = null) o editar una promoción, con las mismas reglas de la consola. */
+/** Formulario para crear o editar una promoción */
 @Composable
 private fun FormularioPromocion(
     inicial: Promocion?,
     productos: List<Producto>,
-    onGuardar: (nombre: String, descuento: Double, productoId: Int) -> Unit,
+    onGuardar: (nombre: String, descuento: Double, productoId: String) -> Unit,
     onCancelar: () -> Unit
 ) {
     var nombre by remember { mutableStateOf(inicial?.nombre ?: "") }
@@ -573,7 +582,6 @@ private data class PromoItem(val promocion: Promocion, val producto: Producto?)
 
 private class PaletaPromo(val fondo: Color, val texto: Color)
 
-/** Morada, azul y naranja, como en el mockup. Se alternan por posición en la lista. */
 private val PALETAS = listOf(
     PaletaPromo(fondo = Color(0xFF5B2C6F), texto = Color.White),
     PaletaPromo(fondo = Color(0xFFDCE6F7), texto = Color(0xFF1B2A49)),
@@ -589,11 +597,9 @@ private fun iconoPorCategoria(categoria: String?): ImageVector = when {
     else -> Icons.Filled.LocalOffer
 }
 
-/** 20.0 -> "20", 12.5 -> "12.5" */
 private fun formatoDescuento(valor: Double): String =
     if (valor % 1.0 == 0.0) valor.toInt().toString() else valor.toString()
 
-/** Formatea con 2 decimales sin depender de String.format (que no es multiplataforma). */
 private fun dinero(valor: Double): String {
     val centavos = (valor * 100).roundToInt()
     return "${centavos / 100}.${(centavos % 100).toString().padStart(2, '0')}"

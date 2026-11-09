@@ -8,7 +8,7 @@ class PromocionService {
     private var siguientePromocionId = 1
 
     // Promociones de ejemplo para que la pantalla no inicie vacía (solo si no hay ninguna)
-    fun cargarPromocionesIniciales(productoService: ProductoService) {
+    suspend fun cargarPromocionesIniciales(productoService: ProductoService) {
         if (promociones.isNotEmpty()) return
         val productos = productoService.obtenerProductos()
 
@@ -28,7 +28,7 @@ class PromocionService {
         return promociones.find { it.id == id }
     }
 
-    fun agregarPromocion(nombre: String, descuento: Double, productoId: Int): Promocion {
+    fun agregarPromocion(nombre: String, descuento: Double, productoId: String): Promocion {
         val nuevaPromocion = Promocion(
             id = siguientePromocionId,
             nombre = nombre,
@@ -41,7 +41,7 @@ class PromocionService {
     }
 
     // Edita nombre, descuento y producto de una promoción existente
-    fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: Int): Boolean {
+    fun actualizarPromocion(id: Int, nombre: String, descuento: Double, productoId: String): Boolean {
         val promocion = buscarPorId(id) ?: return false
         promocion.nombre = nombre
         promocion.descuento = descuento
@@ -55,6 +55,6 @@ class PromocionService {
 
     // Método para eliminar promociones cuando se borra un producto
     fun eliminarPorProductoId(productoId: Int) {
-        promociones.removeIf { it.productoId == productoId }
+        //promociones.removeIf { it.productoId == productoId }
     }
 }
