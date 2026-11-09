@@ -52,7 +52,7 @@ Implementación de Firebase para la autenticación y persistencia de datos. Ahor
 
 Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1uucel66D2Ge1QKVI2bSzCL4YFDwhhwZ1/view?usp=sharing
 
-Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY\_wB3423CHET/view?usp=sharing
+Puedes ver nuestra investigación sobre Firebase a través de este enlace: https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY_wB3423CHET/view?usp=sharing
 
-Capturas complenetarias de lo faltante en la demostración: https://drive.google.com/drive/folders/17wiiVXL38cRwJNGAF2ijhtoVfTQjfiE\_?usp=sharing
+Capturas complenetarias de lo faltante en la demostración: https://drive.google.com/drive/folders/17wiiVXL38cRwJNGAF2ijhtoVfTQjfiE_?usp=sharing
 
