@@ -15,7 +15,8 @@ import services.AuthErrors
 fun LoginScreen(
     firebaseAuthService: FirebaseAuthService,
     onLoginSuccess: (String) -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onGoogleSignIn: suspend () -> String
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -136,6 +137,30 @@ fun LoginScreen(
             enabled = !cargando
         ) {
             Text(if (cargando) "Ingresando..." else "Ingresar")
+        }
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = {
+                scope.launch {
+                    cargando = true
+
+                    try {
+                        val uid = onGoogleSignIn()
+                        onLoginSuccess(uid)
+                    } catch (e: Exception) {
+                        errors = AuthErrors(
+                            general = "No se pudo iniciar sesión con Google. Intentá nuevamente."
+                        )
+                    } finally {
+                        cargando = false
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando
+        ) {
+            Text("Continuar con Google")
         }
 
         Spacer(Modifier.height(8.dp))

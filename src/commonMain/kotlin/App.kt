@@ -22,7 +22,9 @@ import ui.admin.CategoryManagementScreen
 import ui.client.ShoppingListScreen
 
 @Composable
-fun App() {
+fun App(
+    onGoogleSignIn: suspend () -> String
+) {
     val authService = remember { AuthService() }
     val firebaseAuthService = remember { FirebaseAuthService() }
 
@@ -68,7 +70,8 @@ fun App() {
                         },
                         onNavigateToRegister = {
                             currentScreen = Screen.Register
-                        }
+                        },
+                        onGoogleSignIn = onGoogleSignIn
                     )
                 }
 
