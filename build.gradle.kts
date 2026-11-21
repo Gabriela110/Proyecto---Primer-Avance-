@@ -1,3 +1,4 @@
+
 plugins {
     kotlin("multiplatform") version "2.3.0"
     id("com.android.application") version "8.7.3"
@@ -11,15 +12,16 @@ kotlin {
     androidTarget()
 
     sourceSets {
-        //IGNORAMOS LA ANTIGUA CARPETA DE VIEWS SIN ELIMINARLA, PARA MANTENER COMO RESPALDO
+        // IGNORAMOS LA ANTIGUA CARPETA DE VIEWS SIN ELIMINARLA, PARA MANTENER COMO RESPALDO
         commonMain {
             kotlin.exclude("**/views/**")
         }
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
-            implementation(compose.materialIconsExtended) // íconos de la barra inferior y de Promociones
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation("dev.gitlive:firebase-auth:2.7.0")
@@ -35,6 +37,14 @@ kotlin {
             implementation("androidx.activity:activity-compose:1.9.3")
             implementation(compose.uiTooling)
             implementation("androidx.compose.ui:ui-tooling-preview:1.7.3")
+
+            // GOOGLE SIGN-IN - NUEVAS DEPENDENCIAS
+            implementation("androidx.credentials:credentials:1.3.0")
+            implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+            implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+            // Firebase Authentication nativo para Android
+            implementation("com.google.firebase:firebase-auth:25.0.0")
         }
     }
 }

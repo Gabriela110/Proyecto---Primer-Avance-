@@ -5,7 +5,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
-//import services.AuthService
 import services.CategoriaService
 import services.FirebaseAuthService
 import services.ListaCompraService
@@ -24,11 +23,8 @@ import ui.client.ShoppingListScreen
 import ui.theme.SuperAppTheme
 
 @Composable
-fun App() {
-    // Instanciamos los servicios principales
-    //val authService = remember { AuthService() }
+fun App(onGoogleSignIn: suspend () -> String) {
     val firebaseAuthService = remember { FirebaseAuthService() }
-
     val productoService = remember { ProductoService() }
     val promocionService = remember { PromocionService() }
     val listaCompraService = remember { ListaCompraService(productoService, promocionService) }
@@ -45,24 +41,26 @@ fun App() {
     var promosVolverA by remember {
         mutableStateOf<Screen>(Screen.ShoppingList)
     }
-
     SuperAppTheme {
         when (currentScreen) {
-
-            // LOGIN
             is Screen.Login -> {
                 LoginScreen(
                     firebaseAuthService = firebaseAuthService,
                     onLoginSuccess = { esAdministrador ->
-                        currentScreen = if (esAdministrador) {
-                            Screen.AdminDashboard
-                        } else {
-                            Screen.ShoppingList
+                        try{
+                            currentScreen = if (esAdministrador) {
+                                Screen.AdminDashboard
+                            } else {
+                                Screen.ShoppingList
+                            }
+                        } catch (e: Exception) {
+                            currentScreen = Screen.Login
                         }
                     },
                     onNavigateToRegister = {
                         currentScreen = Screen.Register
-                    }
+                    },
+                    onGoogleSignIn = onGoogleSignIn
                 )
             }
 
