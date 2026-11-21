@@ -1,20 +1,59 @@
-# Proyecto---Primer-Avance-
-Primer avance funcional del proyecto " App para control de presupuesto de supermercado" 
-## Diseño UI/UX – Mockups
+# Desarrollo de App Móvil Kotlin “SuperApp”
 
-El diseño de la aplicación móvil SuperApp fue desarrollado en Figma, utilizando una interfaz moderna, intuitiva y adaptada a dispositivos Android.
+Desarrollo del proyecto "App para control de presupuesto de supermercado *SuperApp*" para la materia de Desarrollo de Software para Móviles DSM.
 
-Los mockups representan las principales pantallas y funcionalidades del sistema.
+### Integrantes:
 
-**Enlace al diseño en Figma:** [Ver diseño UI/UX de SuperApp](https://www.figma.com/design/MM3W4eZByDJUPKZ4cW9toW/SuperApp-%E2%80%93-Dise%C3%B1o-UI-UX?node-id=2-194&t=8VvCoA2u8aTrG3e7-1)
+* Miguel Angel Barahona Garcia BG191322
+* Helen Tatiana Barrera Guzmán BG240719
+* Gabriela Guadalupe Merino Hernández MH203046
+* Neris Moisés Méndez Díaz MD161918
 
-**Pantallas diseñadas:**
-1. Inicio de sesión.
-2. Registro de usuarios.
-3. Pantalla principal.
-4. Productos y categorías.
-5. Lista de compras y presupuesto.
-6. Promociones.
-7. Panel de administración.
+## Desarrollo base del proyecto: 20/09/2026
 
-**Componentes reutilizables:** Se diseñaron elementos visuales comunes para mantener la consistencia de la interfaz.
+Primer entregable funcional enfocado en mostrar primeros avances de los módulos principales a nivel de consola.
+
+### Indicaciones:
+
+* Para ingresar como adminitstrador, utilizar las credenciales admin@superselectos.com y contraseña admin123
+* Para explorar el módulo de clientes, primero registrar un nuevo usuario
+* El administrador podrá ver aspectos generales del sistema, como gestión de usuarios, productos, promociones, estadísticas, etc.
+* Los clientes podrán gestionar su presupuesto y elaborar su listado de compras.
+
+## Avance 1 de implementacion final (Foro 1): 21/10/2026
+
+Implementación de Jetpack Compose para la creación de vistas de la interfaz de la aplicación, tomando como base el primer desarrollo y adaptando los módulos originales a interfaces gráficas llamativas.
+
+### Indicaciones:
+
+* Para ingresar como adminitstrador, utilizar las credenciales admin@superselectos.com y contraseña admin123
+* Para ingresar como cliente, utilizar las credenciales cliente@correo.com y contraseña cliente123 o crear un nuevo usuario desde la pantalla de registro
+* Dependiendo del tipo de usuario con el que se ingresó, se mostrará las pantallas respectivas para cada uno
+
+### Videodemostración
+
+Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1lyhX0df50UJZyqPjp-dPCXxjtRvpcRJs/view?usp=sharing
+
+Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: https://drive.google.com/file/d/1wAZ5QdSYwYYhLESp5ZhJpj6JOJ1zI4E2/view?usp=sharing
+
+
+
+## Avance 2 de implementacion final (Foro 2): 8/11/2026
+
+Implementación de Firebase para la autenticación y persistencia de datos. Ahora todo lo hecho dentro de la app quedará guardado en su respectiva base de datos.
+
+### Indicaciones:
+
+* Para ingresar como adminitstrador, utilizar las credenciales admin@superselectos.com y contraseña admin123
+* Para ingresar como cliente, utilizar las credenciales neris@correo.com y contraseña 123456 o crear un nuevo usuario desde la pantalla de registro
+* Dependiendo del tipo de usuario con el que se ingresó, se mostrará las pantallas respectivas para cada uno
+
+### Videodemostración
+
+Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1uucel66D2Ge1QKVI2bSzCL4YFDwhhwZ1/view?usp=sharing
+
+Puedes ver nuestra investigación sobre Firebase a través de este enlace: https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY_wB3423CHET/view?usp=sharing
+
+Capturas complenetarias de lo faltante en la demostración: https://drive.google.com/drive/folders/17wiiVXL38cRwJNGAF2ijhtoVfTQjfiE_?usp=sharing
+
+
