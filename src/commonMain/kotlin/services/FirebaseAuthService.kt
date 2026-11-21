@@ -100,7 +100,7 @@ class FirebaseAuthService {
 
     suspend fun obtenerRolUsuario(uid: String): String {
         val dUsers = db.collection("users").document(uid).get()
-        val rol = dUsers.get<String>("rol") ?: "cliente"
+        val rol = dUsers.get<String?>("rol") ?: "cliente"
         return rol
     }
 }

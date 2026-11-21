@@ -138,7 +138,7 @@ fun LoginScreen(
                         onLoginSuccess(rolUser == "admin")
                     } catch (e: Exception) {
                         errors = AuthErrors(
-                            general = "No se pudo iniciar sesión con Google. Intentá nuevamente."
+                            general = "Error: ${e.message ?: e.toString()}"
                         )
                     } finally {
                         cargando = false
