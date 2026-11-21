@@ -1,10 +1,10 @@
-
 package services
 
 import config.FirebaseProvider
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
-import dev.gitlive.firebase.firestore.firestore
+import utils.AuthValidation
+import utils.ValidationException
 
 class FirebaseAuthService {
 
@@ -16,11 +16,26 @@ class FirebaseAuthService {
         email: String,
         password: String,
         nombre: String,
-        rol: String // "admin" o "client"
+        confirm: String = password,
+        rol: String = "cliente"
     ): String {
+        val errors = AuthValidation.validarRegistro(
+            name = nombre,
+            email = email,
+            password = password,
+            confirm = confirm
+        )
+        if (errors.hasErrors()) {
+            throw ValidationException(errors)
+        }
+
+        val correoLimpio = email.trim()
+        val nombreLimpio = nombre.trim()
+        val rolLimpio = rol.trim().ifEmpty { "cliente" }
+
         // Crear el usuario en Authentication
         val resultado = auth.createUserWithEmailAndPassword(
-            email.trim(),
+            correoLimpio,
             password
         )
 
@@ -30,9 +45,9 @@ class FirebaseAuthService {
         // Crear el usuario en Firestore
         val userData = mapOf(
             "uid" to uid,
-            "email" to email.trim(),
-            "nombre" to nombre,
-            "rol" to "cliente"
+            "email" to correoLimpio,
+            "nombre" to nombreLimpio,
+            "rol" to rolLimpio
         )
 
         try {
@@ -49,6 +64,10 @@ class FirebaseAuthService {
         email: String,
         password: String
     ): String {
+        val errors = AuthValidation.validarLogin(email, password)
+        if (errors.hasErrors()) {
+            throw ValidationException(errors)
+        }
 
         val resultado = auth.signInWithEmailAndPassword(
             email.trim(),

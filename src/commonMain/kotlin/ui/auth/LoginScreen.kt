@@ -1,4 +1,3 @@
-
 package ui.auth
 
 import androidx.compose.foundation.layout.*
@@ -9,12 +8,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import services.FirebaseAuthService
-import services.AuthErrors
+import utils.AuthErrors
+import utils.AuthValidation
+import utils.ValidationException
 
 @Composable
 fun LoginScreen(
     firebaseAuthService: FirebaseAuthService,
-    onLoginSuccess: (String) -> Unit,
+    onLoginSuccess: (Boolean) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -95,34 +96,20 @@ fun LoginScreen(
 
         Button(
             onClick = {
-                val emailError = when {
-                    email.isBlank() -> "El correo es obligatorio"
-                    !email.trim().matches(
-                        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
-                    ) -> "Correo no válido"
-                    else -> null
-                }
+                val validationErrors = AuthValidation.validarLogin(email, password)
+                errors = validationErrors
 
-                val passwordError = if (password.isBlank()) {
-                    "La contraseña es obligatoria"
-                } else {
-                    null
-                }
-
-                errors = AuthErrors(
-                    email = emailError,
-                    password = passwordError
-                )
-
-                if (emailError == null && passwordError == null) {
+                if (!validationErrors.hasErrors()) {
                     scope.launch {
                         cargando = true
 
                         try {
-                            // El rol se determinará al integrar la información
-                            // de usuarios con el módulo de Firestore.
-                            onLoginSuccess(firebaseAuthService.iniciarSesion(email, password))
-                        } catch (e: Exception) {
+                            val userId = firebaseAuthService.iniciarSesion(email, password)
+                            val rolUser = firebaseAuthService.obtenerRolUsuario(userId)
+                            onLoginSuccess(rolUser == "admin")
+                        } catch (e: ValidationException) {
+                            errors = e.errors
+                        } catch (_: Exception) {
                             errors = AuthErrors(
                                 general = "No se pudo iniciar sesión. Verificá tu correo y contraseña."
                             )

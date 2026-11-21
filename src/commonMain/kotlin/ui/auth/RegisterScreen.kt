@@ -1,4 +1,3 @@
-
 package ui.auth
 
 import androidx.compose.foundation.layout.*
@@ -9,7 +8,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import services.FirebaseAuthService
-import services.AuthErrors
+import utils.AuthErrors
+import utils.AuthValidation
+import utils.ValidationException
 
 @Composable
 fun RegisterScreen(
@@ -136,40 +137,15 @@ fun RegisterScreen(
         // Botón Registrarse
         Button(
             onClick = {
-                val nameError = if (name.isBlank()) {
-                    "El nombre es obligatorio"
-                } else {
-                    null
-                }
-
-                val emailError = when {
-                    email.isBlank() -> "El correo es obligatorio"
-                    !email.trim().matches(
-                        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
-                    ) -> "Correo no válido"
-                    else -> null
-                }
-
-                val passwordError = when {
-                    password.isBlank() -> "La contraseña es obligatoria"
-                    password.length < 6 -> "Mínimo 6 caracteres"
-                    else -> null
-                }
-
-                val confirmError = when {
-                    confirm.isBlank() -> "Confirmá la contraseña"
-                    confirm != password -> "Las contraseñas no coinciden"
-                    else -> null
-                }
-
-                errors = AuthErrors(
-                    name = nameError,
-                    email = emailError,
-                    password = passwordError,
-                    confirm = confirmError
+                val validationErrors = AuthValidation.validarRegistro(
+                    name = name,
+                    email = email,
+                    password = password,
+                    confirm = confirm
                 )
+                errors = validationErrors
 
-                if (!errors.hasErrors()) {
+                if (!validationErrors.hasErrors()) {
                     scope.launch {
                         cargando = true
 
@@ -178,12 +154,14 @@ fun RegisterScreen(
                                 email = email,
                                 password = password,
                                 nombre = name,
+                                confirm = confirm,
                                 rol = "cliente"
                             )
 
                             onRegisterSuccess()
-
-                        } catch (e: Exception) {
+                        } catch (e: ValidationException) {
+                            errors = e.errors
+                        } catch (_: Exception) {
                             errors = AuthErrors(
                                 general = "No se pudo completar el registro. Verificá el correo e intentá nuevamente."
                             )

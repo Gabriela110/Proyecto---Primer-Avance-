@@ -5,5 +5,7 @@ data class Producto(
     var nombre: String,
     var precio: Double,
     var stock: Int,
-    var categoria: String
+    var categoria: String,
+    val imagenUrl: String = ""
+
 )

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,8 +31,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,32 +43,50 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import models.Administrador
+import config.FirebaseProvider
 import models.Usuario
-import services.AuthService
 import ui.components.EncabezadoVerde
 
-/**
+/*
  * Vista de usuarios registrados (solo lectura, para el administrador).
  * No muestra contraseñas.
  */
 @Composable
 fun UsuariosScreen(
-    authService: AuthService,
     onBack: () -> Unit
 ) {
     var busqueda by rememberSaveable { mutableStateOf("") }
+    var usuarios by remember { mutableStateOf<List<Usuario>>(emptyList()) }
+    var cargando by remember { mutableStateOf(true) }
 
-    // Se lee en cada composición: al volver a la pantalla aparecen los clientes recién registrados
-    val usuarios = authService.obtenerUsuarios()
-    val administradores = usuarios.count { it is Administrador }
+    LaunchedEffect(Unit) {
+        try {
+            val snapshot = FirebaseProvider.db.collection("users").get()
+            usuarios = snapshot.documents.map { doc ->
+                Usuario(
+                    uid = doc.get<String?>("uid") ?: doc.id,
+                    nombre = doc.get<String?>("nombre") ?: "",
+                    email = doc.get<String?>("email") ?: "",
+                    rol = doc.get<String?>("rol") ?: "cliente"
+                )
+            }
+        } catch (_: Exception) {
+            usuarios = emptyList()
+        } finally {
+            cargando = false
+        }
+    }
+
+    val administradores = usuarios.count {
+        it.rol.equals("admin", ignoreCase = true) || it.rol.equals("administrador", ignoreCase = true)
+    }
     val clientes = usuarios.size - administradores
 
     val texto = busqueda.trim()
     val filtrados = usuarios.filter {
         texto.isEmpty() ||
-            it.nombre.contains(texto, ignoreCase = true) ||
-            it.correo.contains(texto, ignoreCase = true)
+                it.nombre.contains(texto, ignoreCase = true) ||
+                it.email.contains(texto, ignoreCase = true)
     }
 
     Scaffold(
@@ -110,7 +131,14 @@ fun UsuariosScreen(
                 }
             )
 
-            if (filtrados.isEmpty()) {
+            if (cargando) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (filtrados.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(32.dp),
                     contentAlignment = Alignment.Center
@@ -129,7 +157,7 @@ fun UsuariosScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filtrados, key = { it.id }) { usuario ->
+                    items(filtrados, key = { it.uid }) { usuario ->
                         FilaUsuario(usuario)
                     }
                 }
@@ -163,7 +191,7 @@ private fun ResumenUsuarios(etiqueta: String, cantidad: Int, modifier: Modifier 
 
 @Composable
 private fun FilaUsuario(usuario: Usuario) {
-    val esAdmin = usuario is Administrador
+    val esAdmin = usuario.rol.equals("admin", ignoreCase = true) || usuario.rol.equals("administrador", ignoreCase = true)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -201,7 +229,7 @@ private fun FilaUsuario(usuario: Usuario) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = usuario.correo,
+                    text = usuario.email,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

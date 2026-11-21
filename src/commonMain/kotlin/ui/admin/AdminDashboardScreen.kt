@@ -6,17 +6,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import services.AuthService
+import kotlinx.coroutines.launch
+import services.FirebaseAuthService
 
 @Composable
 fun AdminDashboardScreen(
-    authService: AuthService,
+    firebaseAuthService: FirebaseAuthService,
     onNavigateToProductos: () -> Unit,
     onNavigateToPromociones: () -> Unit,
     onNavigateToCategorias: () -> Unit,
     onNavigateToUsuarios: () -> Unit, // Opcional si deseas mostrar los usuarios en pantalla o consola
     onLogout: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -55,7 +58,7 @@ fun AdminDashboardScreen(
             Text("Gestionar categorías")
         }
 
-        // 5. Ver usuarios registrados (Llama directamente al método original del AuthService)
+        // 5. Ver usuarios registrados
         Button(
             onClick = onNavigateToUsuarios,
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -68,8 +71,10 @@ fun AdminDashboardScreen(
         // 6. Salir / Cerrar sesión
         OutlinedButton(
             onClick = {
-                authService.cerrarSesion()
-                onLogout()
+                coroutineScope.launch {
+                    firebaseAuthService.cerrarSesion()
+                    onLogout()
+                }
             },
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)

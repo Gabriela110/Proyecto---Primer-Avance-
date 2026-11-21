@@ -1,13 +1,13 @@
 package models
 
+import proyecto_primer_avance.generated.resources.Res
+
 class Cliente(
-    id: Int,
+    id: String,
     nombre: String,
     correo: String,
-    contrasena: String
-) : Usuario(id, nombre, correo, contrasena), Autenticable {
-
-    override val rol: String = "CLIENTE"
+    rol: String
+) : Usuario(id, nombre, correo, rol), Autenticable {
 
     private var sesionActiva: Boolean = false
 
@@ -21,12 +21,12 @@ class Cliente(
         println("Sesión cerrada correctamente.")
     }
 
-    override fun mostrarMenu() {
+    /*override fun mostrarMenu() {
         println()
         println("===== MENÚ CLIENTE =====")
         println("Bienvenido/a, $nombre")
         println("1. Gestión de presupuesto y compras")
         println("2. Estadísticas")
         println("3. Cerrar sesión")
-    }
+    }*/
 }

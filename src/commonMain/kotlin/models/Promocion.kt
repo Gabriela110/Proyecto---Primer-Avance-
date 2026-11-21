@@ -1,8 +1,9 @@
 package models
 
 data class Promocion(
-    val id: Int,
+    val id: String,
     var nombre: String,
-    var descuento: Double,
-    var productoId: String
+    val productoId: String,
+    val descuento: Double,
+    val activa: Boolean = true
 )

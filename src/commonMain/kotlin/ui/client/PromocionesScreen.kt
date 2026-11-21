@@ -233,8 +233,12 @@ fun PromocionesScreen(
                         promocionService.agregarPromocion(nombre, descuento, productoId)
                         mensaje = "Promoción creada correctamente."
                     } else {
-                        promocionService.actualizarPromocion(editando.id, nombre, descuento, productoId)
-                        mensaje = "Promoción actualizada correctamente."
+                        val actualizada = promocionService.actualizarPromocion(editando.id, nombre, descuento, productoId)
+                        mensaje = if (actualizada) {
+                            "Promoción actualizada correctamente."
+                        } else {
+                            "No se pudo actualizar la promoción."
+                        }
                     }
                     version += 1
                     mostrarFormulario = false

@@ -1,188 +1,212 @@
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
-
-import services.AuthService
-import services.FirebaseAuthService
+//import services.AuthService
 import services.CategoriaService
+import services.FirebaseAuthService
 import services.ListaCompraService
 import services.ProductoService
 import services.PromocionService
-
 import ui.Screen
-import ui.theme.SuperAppTheme
+import ui.admin.AdminDashboardScreen
+import ui.admin.CategoryManagementScreen
+import ui.admin.ProductManagementScreen
+import ui.admin.UsuariosScreen
 import ui.auth.LoginScreen
 import ui.auth.RegisterScreen
-import ui.admin.AdminDashboardScreen
-import ui.admin.UsuariosScreen
 import ui.client.ClientTab
 import ui.client.PromocionesScreen
-import ui.admin.ProductManagementScreen
-import ui.admin.CategoryManagementScreen
 import ui.client.ShoppingListScreen
+import ui.theme.SuperAppTheme
 
 @Composable
 fun App() {
-    val authService = remember { AuthService() }
+    // Instanciamos los servicios principales
+    //val authService = remember { AuthService() }
     val firebaseAuthService = remember { FirebaseAuthService() }
 
     val productoService = remember { ProductoService() }
-    val listaCompraService = remember { ListaCompraService(productoService) }
-    val categoriaService = remember { CategoriaService() }
     val promocionService = remember { PromocionService() }
+    val listaCompraService = remember { ListaCompraService(productoService, promocionService) }
+    val categoriaService = remember { CategoriaService() }
 
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        productoService.obtenerProductos()
-        promocionService.obtenerPromociones()
+    // Pantalla inicial
+    var currentScreen by remember {
+        mutableStateOf<Screen>(Screen.Login)
     }
 
-    MaterialTheme {
-        var currentScreen by remember {
-            mutableStateOf<Screen>(Screen.Login)
-        }
+    // Pantalla a la que regresan las promociones
+    var promosVolverA by remember {
+        mutableStateOf<Screen>(Screen.ShoppingList)
+    }
 
-        var promosVolverA by remember {
-            mutableStateOf<Screen>(Screen.ShoppingList)
-        }
+    SuperAppTheme {
+        when (currentScreen) {
 
-        SuperAppTheme {
-            when (currentScreen) {
-                is Screen.Login -> {
-                    LoginScreen(
-                        firebaseAuthService = firebaseAuthService,
-                        onLoginSuccess = { uid ->
-                            scope.launch {
-                                try {
-                                    val rol = firebaseAuthService.obtenerRolUsuario(uid)
-                                    if (rol == "admin") {
-                                        currentScreen = Screen.AdminDashboard
-                                    } else {
-                                        currentScreen = Screen.ShoppingList
-                                    }
-                                } catch (e: Exception) {
-                                    currentScreen = Screen.ShoppingList
-                                }
-                            }
-                        },
-                        onNavigateToRegister = {
-                            currentScreen = Screen.Register
+            // LOGIN
+            is Screen.Login -> {
+                LoginScreen(
+                    firebaseAuthService = firebaseAuthService,
+                    onLoginSuccess = { esAdministrador ->
+                        currentScreen = if (esAdministrador) {
+                            Screen.AdminDashboard
+                        } else {
+                            Screen.ShoppingList
                         }
-                    )
-                }
+                    },
+                    onNavigateToRegister = {
+                        currentScreen = Screen.Register
+                    }
+                )
+            }
 
-                is Screen.Register -> {
-                    RegisterScreen(
-                        firebaseAuthService = firebaseAuthService,
-                        onRegisterSuccess = {
-                            scope.launch {
-                                firebaseAuthService.cerrarSesion()
-                                currentScreen = Screen.Login
-                            }
-                        },
-                        onBackToLogin = {
+            // REGISTRO
+            is Screen.Register -> {
+                RegisterScreen(
+                    firebaseAuthService = firebaseAuthService,
+                    onRegisterSuccess = {
+                        scope.launch {
+                            firebaseAuthService.cerrarSesion()
                             currentScreen = Screen.Login
                         }
-                    )
-                }
+                    },
+                    onBackToLogin = {
+                        currentScreen = Screen.Login
+                    }
+                )
+            }
 
-                is Screen.AdminDashboard -> {
-                    AdminDashboardScreen(
-                        authService = authService,
-                        onNavigateToProductos = {
-                            currentScreen = Screen.Products
-                        },
-                        onNavigateToPromociones = {
-                            promosVolverA = Screen.AdminDashboard
-                            currentScreen = Screen.Promotions
-                        },
-                        onNavigateToCategorias = {
-                            currentScreen = Screen.Categories
-                        },
-                        onNavigateToUsuarios = {
-                            currentScreen = Screen.Users
-                        },
-                        onLogout = {
-                            scope.launch {
-                                firebaseAuthService.cerrarSesion()
-                                currentScreen = Screen.Login
+            // PANEL ADMINISTRADOR
+            is Screen.AdminDashboard -> {
+                AdminDashboardScreen(
+                    firebaseAuthService = firebaseAuthService,
+                    onNavigateToProductos = {
+                        currentScreen = Screen.Products
+                    },
+                    onNavigateToPromociones = {
+                        promosVolverA = Screen.AdminDashboard
+                        currentScreen = Screen.Promotions
+                    },
+                    onNavigateToCategorias = {
+                        currentScreen = Screen.Categories
+                    },
+                    onNavigateToUsuarios = {
+                        currentScreen = Screen.Users
+                    },
+                    onLogout = {
+                        scope.launch {
+                            firebaseAuthService.cerrarSesion()
+                            currentScreen = Screen.Login
+                        }
+                    }
+                )
+            }
+
+            // LISTA DE COMPRAS
+            is Screen.ShoppingList -> {
+                ShoppingListScreen(
+                    firebaseAuthService = firebaseAuthService,
+                    listaCompraService = listaCompraService,
+                    productoService = productoService,
+                    onNavigate = { tab ->
+                        when (tab) {
+                            ClientTab.PROMOS -> {
+                                promosVolverA = Screen.ShoppingList
+                                currentScreen = Screen.Promotions
                             }
-                        }
-                    )
-                }
-
-                is Screen.ShoppingList -> {
-                    ShoppingListScreen(
-                        authService = authService,
-                        listaCompraService = listaCompraService,
-                        productoService = productoService,
-                        onBack = {},
-                        onLogout = {
-                            scope.launch {
-                                firebaseAuthService.cerrarSesion()
-                                currentScreen = Screen.Login
+                            ClientTab.INICIO,
+                            ClientTab.LISTAS -> {
+                                currentScreen = Screen.ShoppingList
                             }
-                        },
-                        onNavigateToPromociones = {
-                            promosVolverA = Screen.ShoppingList
-                            currentScreen = Screen.Promotions
+                            else -> Unit
                         }
-                    )
-                }
-
-                is Screen.Users -> {
-                    UsuariosScreen(
-                        authService = authService,
-                        onBack = {
-                            currentScreen = Screen.AdminDashboard
+                    },
+                    onBack = {
+                        // Definir posteriormente
+                    },
+                    onLogout = {
+                        scope.launch {
+                            firebaseAuthService.cerrarSesion()
+                            currentScreen = Screen.Login
                         }
-                    )
-                }
+                    },
+                    onNavigateToPromociones = {
+                        promosVolverA = Screen.ShoppingList
+                        currentScreen = Screen.Promotions
+                    }
+                )
+            }
 
-                is Screen.Products -> {
-                    ProductManagementScreen(
-                        productoService = productoService,
-                        categoriaService = categoriaService,
-                        onBack = {
-                            currentScreen = Screen.AdminDashboard
-                        }
-                    )
-                }
+            // USUARIOS
+            is Screen.Users -> {
+                UsuariosScreen(
+                    onBack = {
+                        currentScreen = Screen.AdminDashboard
+                    }
+                )
+            }
 
-                is Screen.Categories -> {
-                    CategoryManagementScreen(
-                        categoriaService = categoriaService,
-                        onBack = {
-                            currentScreen = Screen.AdminDashboard
-                        }
-                    )
-                }
+            // PRODUCTOS
+            is Screen.Products -> {
+                ProductManagementScreen(
+                    productoService = productoService,
+                    categoriaService = categoriaService,
+                    onBack = {
+                        currentScreen = Screen.AdminDashboard
+                    }
+                )
+            }
 
-                is Screen.Promotions -> {
-                    PromocionesScreen(
-                        promocionService = promocionService,
-                        productoService = productoService,
-                        onBack = {
-                            currentScreen = promosVolverA
-                        },
-                        mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
-                        modoAdmin = promosVolverA == Screen.AdminDashboard,
-                        onNavigate = { tab ->
-                            when (tab) {
-                                ClientTab.INICIO,
-                                ClientTab.LISTAS -> {
-                                    currentScreen = Screen.ShoppingList
-                                }
-                                else -> Unit
+            // CATEGORÍAS
+            is Screen.Categories -> {
+                CategoryManagementScreen(
+                    categoriaService = categoriaService,
+                    productoService = productoService,
+                    onBack = {
+                        currentScreen = Screen.AdminDashboard
+                    }
+                )
+            }
+
+            // PROMOCIONES
+            is Screen.Promotions -> {
+                PromocionesScreen(
+                    promocionService = promocionService,
+                    productoService = productoService,
+                    onBack = {
+                        currentScreen = promosVolverA
+                    },
+                    mostrarBarraInferior = promosVolverA == Screen.ShoppingList,
+                    modoAdmin = promosVolverA == Screen.AdminDashboard,
+                    onNavigate = { tab ->
+                        when (tab) {
+                            ClientTab.INICIO,
+                            ClientTab.LISTAS -> {
+                                currentScreen = Screen.ShoppingList
                             }
+                            ClientTab.PROMOS -> {
+                                currentScreen = Screen.Promotions
+                            }
+                            else -> Unit
                         }
-                    )
-                }
+                    }
+                )
+            }
 
-                is Screen.Statistics -> {}
+            // ESTADÍSTICAS
+            is Screen.Statistics -> {
+                // Aquí pondremos la vista de Estadísticas
+            }
 
-                else -> {}
+            // RESTO DE PANTALLAS
+            else -> {
+                // Pantallas pendientes
             }
         }
     }

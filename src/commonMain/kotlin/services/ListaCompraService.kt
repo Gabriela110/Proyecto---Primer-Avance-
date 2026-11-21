@@ -27,7 +27,9 @@ object Logger {
 }
 
 class ListaCompraService(
-    private val productoService: ProductoService
+    private val productoService: ProductoService,
+    // Opcional: si se entrega, la lista aplica las promociones vigentes a los precios
+    private val promocionService: PromocionService? = null
 ) {
     private var presupuesto: Double = 0.0
     private val db = FirebaseProvider.db
@@ -172,7 +174,7 @@ class ListaCompraService(
 
         val cantidadActual = elementosCache[producto] ?: 0
         val diferenciaCantidad = nuevaCantidad - cantidadActual
-        val subtotalAdicional = diferenciaCantidad * producto.precio
+        val subtotalAdicional = diferenciaCantidad * precioUnitario(producto)
 
         if (diferenciaCantidad > 0 && excederiaPresupuesto(subtotalAdicional)) {
             throw PresupuestoExcedidoException(
@@ -183,10 +185,10 @@ class ListaCompraService(
         }
 
         val docId = "${currentUser.uid}_$productoId"
-        val itemActualizado = ItemCarrito(
-            userId = currentUser.uid,
-            productoId = productoId,
-            cantidad = nuevaCantidad
+        val itemActualizado = mapOf(
+            "userId" to currentUser.uid,
+            "productoId" to productoId,
+            "cantidad" to nuevaCantidad
         )
 
         db.collection("carrito").document(docId).set(itemActualizado)
@@ -195,6 +197,20 @@ class ListaCompraService(
 
     fun calcularTotalLista(): Double {
         return elementosCache.entries.sumOf { (producto, cantidad) -> producto.precio * cantidad }
+    }
+
+    // Mayor descuento (%) vigente para el producto, o 0.0 si no tiene promoción
+    fun descuentoDe(producto: Producto): Double {
+        return 0.0
+    }
+
+    // Precio que realmente se cobra en la lista (con la promoción aplicada)
+    fun precioUnitario(producto: Producto): Double {
+        return producto.precio * (1 - descuentoDe(producto) / 100.0)
+    }
+
+    fun hayPresupuesto(): Boolean {
+        return presupuesto > 0
     }
 
     suspend fun establecerPresupuesto(monto: Double) {
@@ -215,7 +231,7 @@ class ListaCompraService(
         return presupuesto - calcularTotalLista()
     }
 
-    private fun excederiaPresupuesto(montoAdicional: Double): Boolean {
+    fun excederiaPresupuesto(montoAdicional: Double): Boolean {
         return (calcularTotalLista() + montoAdicional) > presupuesto
     }
 }

@@ -1,7 +1,7 @@
 package services
 
 class EstadisticaService(
-    private val authService: AuthService,
+   // private val authService: AuthService,
     private val productoService: ProductoService,
     private val promocionService: PromocionService,
     private val categoriaService: CategoriaService,
@@ -27,7 +27,8 @@ class EstadisticaService(
     }
 
     fun obtenerTotalUsuarios(): Int {
-        return authService.obtenerUsuarios().size
+        //return authService.obtenerUsuarios().size
+        return 1
     }
 
     // ==========================================================
