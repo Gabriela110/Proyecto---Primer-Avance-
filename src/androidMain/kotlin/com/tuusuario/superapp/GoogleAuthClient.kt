@@ -1,11 +1,10 @@
-
 package com.tuusuario.superapp
 
 import android.app.Activity
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.FirebaseAuth
@@ -20,14 +19,11 @@ class GoogleAuthClient(
     private val credentialManager = CredentialManager.create(activity)
 
     suspend fun iniciarSesionConGoogle(): String {
-
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setServerClientId(WEB_CLIENT_ID)
-            .setFilterByAuthorizedAccounts(false)
+        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID)
             .build()
 
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(signInWithGoogleOption)
             .build()
 
         val result = credentialManager.getCredential(
@@ -50,11 +46,9 @@ class GoogleAuthClient(
             )
 
             return suspendCancellableCoroutine { continuation ->
-
                 FirebaseAuth.getInstance()
                     .signInWithCredential(firebaseCredential)
                     .addOnCompleteListener { task ->
-
                         if (task.isSuccessful) {
                             val uid = task.result?.user?.uid
 
@@ -83,5 +77,3 @@ class GoogleAuthClient(
             "966448519452-k87e30imbte5vbjl4li8hll632kdei7u.apps.googleusercontent.com"
     }
 }
-
-

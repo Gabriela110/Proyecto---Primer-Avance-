@@ -32,9 +32,9 @@ Implementación de Jetpack Compose para la creación de vistas de la interfaz de
 
 ### Videodemostración
 
-Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1lyhX0df50UJZyqPjp-dPCXxjtRvpcRJs/view?usp=sharing
+Puedes ver una desmostración de esta aplicación a través de este enlace: [Ver en Drive](https://drive.google.com/file/d/1lyhX0df50UJZyqPjp-dPCXxjtRvpcRJs/view?usp=sharing)
 
-Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: https://drive.google.com/file/d/1wAZ5QdSYwYYhLESp5ZhJpj6JOJ1zI4E2/view?usp=sharing
+Puedes ver nuestra investigación sobre Jetpack Compose a través de este enlace: [Ver en Drive](https://drive.google.com/file/d/1wAZ5QdSYwYYhLESp5ZhJpj6JOJ1zI4E2/view?usp=sharing)
 
 
 
@@ -50,18 +50,32 @@ Implementación de Firebase para la autenticación y persistencia de datos. Ahor
 
 ### Videodemostración
 
-Puedes ver una desmostración de esta aplicación a través de este enlace: https://drive.google.com/file/d/1uucel66D2Ge1QKVI2bSzCL4YFDwhhwZ1/view?usp=sharing
+Puedes ver una desmostración de esta aplicación a través de este enlace: [Ver en Drive](https://drive.google.com/file/d/1uucel66D2Ge1QKVI2bSzCL4YFDwhhwZ1/view?usp=sharing)
 
-Puedes ver nuestra investigación sobre Firebase a través de este enlace: https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY_wB3423CHET/view?usp=sharing
+Puedes ver nuestra investigación sobre Firebase a través de este enlace: [Ver en Drive](https://drive.google.com/file/d/1IYdIsekglBjTtAaB3SXbY_wB3423CHET/view?usp=sharing)
 
-Capturas complenetarias de lo faltante en la demostración: https://drive.google.com/drive/folders/17wiiVXL38cRwJNGAF2ijhtoVfTQjfiE_?usp=sharing
-## Diseño UI/UX – Mockups
+Capturas complenetarias de lo faltante en la demostración: [Ver en Drive](https://drive.google.com/drive/folders/17wiiVXL38cRwJNGAF2ijhtoVfTQjfiE_?usp=sharing)
 
-El diseño de la aplicación móvil **SuperApp** fue desarrollado en Figma, utilizando una interfaz moderna, intuitiva y adaptada a dispositivos Android.
+## Entrega final de proyecto: 22/11/2026
 
-Los mockups representan las principales pantallas y funcionalidades del sistema.
+Implementación final de la aplicación SuperApp, con todos los módulos integrados desarrollados completamente y total funcionalidad.
 
-**Enlace al diseño en Figma:** [Ver diseño UI/UX de SuperApp](https://www.figma.com/design/MM3W4eZByDJUPKZ4cW9toW/SuperApp-%E2%80%93-Dise%C3%B1o-UI-UX?node-id=2-194&t=8VvCoA2u8aTrG3e7-1)
+### Indicaciones:
+
+* Para ingresar como adminitstrador, utilizar las credenciales admin@superselectos.com y contraseña admin123
+* Para ingresar como cliente, utilizar las credenciales usuario@correo.com y contraseña 123456 o crear un nuevo usuario desde la pantalla de registro
+* Para registrarse, existen dos maneras: Ingresando tus datos manualmente o seleccionando la opción para acceder con Google
+* Dependiendo del tipo de usuario con el que se ingresó, se mostrará las pantallas respectivas para cada uno
+
+### Diseño UI/UX – Mockups
+
+El diseño de la aplicación móvil SuperApp fue desarrollado en Figma, utilizando una interfaz moderna, intuitiva y adaptada a dispositivos Android.
+
+Los Mockups representan las principales pantallas y funcionalidades del sistema.
+
+Puedes ver el diseño en Figma: [Ver diseño UI/UX de SuperApp](https://www.figma.com/design/MM3W4eZByDJUPKZ4cW9toW/SuperApp-%E2%80%93-Dise%C3%B1o-UI-UX?node-id=2-194&t=8VvCoA2u8aTrG3e7-1)
+
+O puedes ver los Mockups acá: [Ver en Drive](https://drive.google.com/drive/folders/1q0naHfAndmduMhkUFRa06qkfC4VwiMgj?usp=sharing)
 
 ### Pantallas diseñadas
 
@@ -76,4 +90,3 @@ Los mockups representan las principales pantallas y funcionalidades del sistema.
 ### Componentes reutilizables
 
 Se diseñaron elementos visuales comunes para mantener la consistencia y uniformidad de la interfaz de la aplicación.
-
